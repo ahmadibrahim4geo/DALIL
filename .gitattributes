@@ -1,0 +1,22 @@
+* text=auto
+*.js text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.svg text eol=lf
+*.py text eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Preserve pinned upstream bytes and their recorded hashes.
+"DALIL Chrome Exstension/lib/leaflet.js" -text
+"DALIL Chrome Exstension/lib/leaflet.css" -text
+"DALIL Chrome Exstension/lib/xlsx.full.min.js" -text
+"DALIL Chrome Exstension/assets/symbols/*.svg" -text

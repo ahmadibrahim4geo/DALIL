@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f2f4f8">
+  <title>دَلِيل (DALIL) | اكتشاف وجمع معلومات المواقع وسجلات الأماكن</title>
+  <link rel="icon" type="image/png" href="../icons/icon48.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../lib/leaflet.css">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+  <a class="skip-link" href="#map" data-i18n="static0">تخطي إلى الخريطة</a>
+
+  <!-- SVG Symbol Sprites -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+    <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="ic-map" viewBox="0 0 24 24"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Z"/><path d="M9 3v16M15 5v16"/></symbol>
+    <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="ic-layers" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Zm-9 10 9 5 9-5M3 17l9 5 9-5"/></symbol>
+    <symbol id="ic-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="ic-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 2 4 3 9 3s9-1 9-3V5M3 12c0 2 4 3 9 3s9-1 9-3"/></symbol>
+    <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="ic-sliders" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></symbol>
+    <symbol id="ic-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a3 3 0 1 1 5 2c-1.2 1-2.5 1.3-2.5 3M12 18h.01"/></symbol>
+    <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="ic-play" viewBox="0 0 24 24"><path d="m7 4 14 8-14 8Z"/></symbol>
+    <symbol id="ic-pause" viewBox="0 0 24 24"><path d="M7 4v16M17 4v16"/></symbol>
+    <symbol id="ic-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+    <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M20 5v6h-6M4 19v-6h6"/><path d="M5 10A8 8 0 0 1 19 6M19 14A8 8 0 0 1 5 18"/></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+    <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5M4 18v3h16v-3"/></symbol>
+    <symbol id="ic-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
+    <symbol id="ic-minus" viewBox="0 0 24 24"><path d="M4 12h16"/></symbol>
+    <symbol id="ic-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
+    <symbol id="ic-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="ic-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3ZM12 9v5m0 3h.01"/></symbol>
+    <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+    <symbol id="ic-file" viewBox="0 0 24 24"><path d="M6 2h8l5 5v15H6Z"/><path d="M14 2v5h5M9 12h7M9 16h7"/></symbol>
+    <symbol id="ic-checklist" viewBox="0 0 24 24"><path d="m3 6 2 2 4-4M12 6h9m-18 6 2 2 4-4m3 2h9m-18 6 2 2 4-4m3 2h9"/></symbol>
+    <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></symbol>
+    <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+    <symbol id="ic-rect" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-dasharray="2 2"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10Z"/></symbol>
+    <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></symbol>
+    <symbol id="ic-code" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+    <symbol id="ic-github" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/></symbol>
+  </svg>
+
+  <div class="app">
+
+    <!-- ═══════════ Permanent Navigation Rail ═══════════ -->
+    <aside class="app-rail" aria-label="التنقل الرئيسي" data-i18n-aria-label="static1">
+      <div class="rail-brand">
+        <img src="../assets/dalil_logo_dark.png" id="brandLogoImg" alt="DALIL" class="rail-logo">
+        <div class="rail-brand-copy">
+          <b id="brandTitleText" data-i18n="brandTitle">دَلِيل</b>
+          <small id="brandSubtitleText" data-i18n="brandAcronym">اكتشاف وجمع معلومات المواقع وسجلات الأماكن</small>
+        </div>
+      </div>
+
+      <div class="rail-head" data-i18n="railHeadNav">القائمة الرئيسية</div>
+      <nav class="rail-nav" id="railNav">
+        <button type="button" class="nav-item active" data-route="workspace" title="مساحة العمل (الخريطة والجدول)" data-i18n-title="static2">
+          <svg class="icon"><use href="#ic-map"/></svg>
+          <span class="nav-label" data-i18n="navWorkspace">مساحة العمل</span>
+        </button>
+        <button type="button" class="nav-item" data-route="phenomena" title="الظاهرات المستهدفة ومكتبة الظواهر" data-i18n-title="static3">
+          <svg class="icon"><use href="#ic-target"/></svg>
+          <span class="nav-label" data-i18n="navPhenomena">الظاهرات والمكتبة</span>
+          <span class="nav-count" id="navPhenomCount">0</span>
+        </button>
+        <button type="button" class="nav-item" data-route="setup" title="نطاق الدراسة وهندسة الشبكة والخيارات" data-i18n-title="static4">
+          <svg class="icon"><use href="#ic-grid"/></svg>
+          <span class="nav-label" data-i18n="navSetup">النطاق والشبكة</span>
+        </button>
+        <button type="button" class="nav-item" data-route="records" title="سجل البيانات ومركز التصدير" data-i18n-title="static5">
+          <svg class="icon"><use href="#ic-database"/></svg>
+          <span class="nav-label" data-i18n="navRecords">سجل البيانات</span>
+          <span class="nav-count" id="navRecordCount">0</span>
+        </button>
+        <button type="button" class="nav-item" data-route="about" title="عن منصة دَلِيل ومطور الأداة" data-i18n-title="static6">
+          <svg class="icon"><use href="#ic-user"/></svg>
+          <span class="nav-label" data-i18n="navAbout">عن الأداة والمطور</span>
+        </button>
+      </nav>
+
+      <div class="rail-foot">
+        <div class="workspace-state">
+          <span class="online" id="railOnlineDot"></span>
+          <div>
+            <b id="railStateTitle" data-i18n="static7">في وضع الاستعداد</b>
+            <small id="railStateSub" data-i18n="static8">لم يبدأ أي مسح بعد</small>
+          </div>
+        </div>
+        <div class="rail-sign">DALIL · GEO WORKSPACE · 2026</div>
+      </div>
+    </aside>
+
+    <!-- ═══════════ Main Content Area ═══════════ -->
+    <div class="main">
+
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div class="breadcrumbs">
+          <span class="optional">DALIL</span>
+          <span class="optional">/</span>
+          <strong id="breadcrumbCurrentView" data-i18n="navWorkspace">مساحة العمل</strong>
+          <span class="pill warm optional" data-i18n="brandTag">اكتشاف وجمع معلومات المواقع</span>
+        </div>
+
+        <div class="top-actions">
+          <button type="button" id="btnDashDedup" class="btn small" title="فحص الإحداثيات وحذف التكرار مع الاحتفاظ بالأكمل تفاصيلاً" data-i18n-title="static9">
+            <svg class="icon sm"><use href="#ic-shield"/></svg>
+            <span data-i18n="btnDedup">تنظيف التكرار</span>
+          </button>
+          <button type="button" id="btnDashClear" class="btn small danger-ghost" title="تفريغ كافة البيانات والبدء من جديد" data-i18n-title="static10">
+            <svg class="icon sm"><use href="#ic-trash"/></svg>
+            <span data-i18n="btnClear">تفريغ</span>
+          </button>
+          <button type="button" id="btnRefresh" class="btn small icon-only" title="تحديث حالة اللوحة" data-i18n-title="static11" aria-label="تحديث" data-i18n-aria-label="static12">
+            <svg class="icon sm"><use href="#ic-refresh"/></svg>
+          </button>
+
+          <span class="top-divider"></span>
+
+          <button type="button" id="btnThemeToggle" class="btn small icon-only" title="تبديل مظهر الواجهة" data-i18n-title="static13">🌙</button>
+          <button type="button" id="btnLangToggle" class="btn small lang-tool" title="تبديل لغة الواجهة" data-i18n-title="static14">
+            <svg class="icon sm"><use href="#ic-globe"/></svg>
+            <span>English</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="content">
+
+        <!-- ═══════════ Modern Compact Titlebar (With Inline KPIs & Actions) ═══════════ -->
+        <div class="titlebar">
+          <div class="title-head">
+            <div class="eyebrow" data-i18n="brandDesc">محرك المسح الشبكي واستخراج المعالم المكانية</div>
+            <h1 id="pageTitleHeading" data-i18n="pageTitle">مساحة العمل المكانية</h1>
+            <p id="pageIntroPara" data-i18n="pageIntro">حدّد الظاهرات ومنطقة الدراسة وشبكة المربعات، ثم ابدأ الاستخراج وراقب التقدم لحظياً.</p>
+          </div>
+
+          <!-- 4 Compact KPI Pill Buttons in the Empty Horizontal Space -->
+          <div class="titlebar-metrics-strip" id="titlebarMetrics">
+            <button type="button" class="kpi-btn-pill orange" id="kpiBtnCells" title="إجمالي خلايا شبكة المسح" data-i18n-title="static15">
+              <span class="kpi-btn-icon"><svg class="icon sm"><use href="#ic-grid"/></svg></span>
+              <div class="kpi-btn-body">
+                <span class="kpi-btn-label" data-i18n="kpiCellsShort">الخلايا:</span>
+                <b class="kpi-btn-val num" id="hudCellsCount">0</b>
+              </div>
+            </button>
+
+            <button type="button" class="kpi-btn-pill blue" id="kpiBtnPlaces" title="المواقع والمعالم المرصودة" data-i18n-title="static16">
+              <span class="kpi-btn-icon"><svg class="icon sm"><use href="#ic-pin"/></svg></span>
+              <div class="kpi-btn-body">
+                <span class="kpi-btn-label" data-i18n="kpiPlacesShort">المعالم:</span>
+                <b class="kpi-btn-val num" id="hudPlacesCount">0</b>
+              </div>
+            </button>
+
+            <button type="button" class="kpi-btn-pill violet" id="kpiBtnDup" title="المكررات المستبعدة تلقائياً" data-i18n-title="static17">
+              <span class="kpi-btn-icon"><svg class="icon sm"><use href="#ic-shield"/></svg></span>
+              <div class="kpi-btn-body">
+                <span class="kpi-btn-label" data-i18n="kpiDupShort">المستبعدات:</span>
+                <b class="kpi-btn-val num" id="hudDupCount">0</b>
+              </div>
+            </button>
+
+            <button type="button" class="kpi-btn-pill green" id="kpiBtnProgress" title="نسبة تقدم المسح" data-i18n-title="static18">
+              <span class="kpi-btn-icon"><svg class="icon sm"><use href="#ic-checklist"/></svg></span>
+              <div class="kpi-btn-body">
+                <span class="kpi-btn-label" data-i18n="kpiProgressShort">التقدم:</span>
+                <b class="kpi-btn-val num"><span id="metricProgressVal">0</span>%</b>
+              </div>
+            </button>
+          </div>
+
+          <!-- Title Actions: Compact Alert Pill + Sticky Action Controls -->
+          <div class="title-actions">
+            <!-- Compact Status Alert Pill (Replacing the old full-width bulky banner) -->
+            <div class="status-alert-pill" id="statusNotice" data-status="idle" role="status" aria-live="polite" title="حالة المحرك" data-i18n-title="static19">
+              <span class="live-dot status-idle" id="statusPillDot" aria-hidden="true"></span>
+              <svg class="icon sm" id="statusPillIcon"><use href="#ic-clock"/></svg>
+              <span class="status-pill-text" id="dashboardStatusText" data-i18n="static20">جاهز</span>
+              <span class="status-pill-eta" id="noticeEtaLabel">—</span>
+            </div>
+
+            <!-- Sticky Run Action Buttons -->
+            <div class="titlebar-run-actions">
+              <button type="button" id="btnTopStart" class="btn orange" title="بدء عملية المسح الجغرافي" data-i18n-title="static21">
+                <svg class="icon sm"><use href="#ic-play"/></svg>
+                <span data-i18n="btnStart">بدء الاستخراج</span>
+              </button>
+              <button type="button" id="btnTopPause" class="btn warn hidden" title="إيقاف مؤقت للمسح" data-i18n-title="static22">
+                <svg class="icon sm"><use href="#ic-pause"/></svg>
+                <span data-i18n="btnPause">إيقاف مؤقت</span>
+              </button>
+              <button type="button" id="btnTopResume" class="btn primary hidden" title="استئناف المسح" data-i18n-title="static23">
+                <svg class="icon sm"><use href="#ic-play"/></svg>
+                <span data-i18n="btnResume">استئناف</span>
+              </button>
+              <button type="button" id="btnTopStop" class="btn danger hidden" title="إيقاف الاستخراج نهائياً وحفظ البيانات" data-i18n-title="static24">
+                <svg class="icon sm"><use href="#ic-stop"/></svg>
+                <span data-i18n="btnStop">إيقاف الاستخراج</span>
+              </button>
+            </div>
+
+            <button type="button" id="btnTitleFit" class="btn small icon-only" title="توسيط الخريطة على منطقة الدراسة" data-i18n-title="static25">
+              <svg class="icon sm"><use href="#ic-target"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════════
+             VIEW 1: مساحة العمل الجغرافية المتوازنة (خريطة كاملة + جدول قابل للسحب)
+             ══════════════════════════════════════════════════════════════════════ -->
+        <div id="view-workspace" class="dalil-view active">
+
+          <div class="workspace-balanced-layout">
+
+            <!-- Quick Workspace Control & Live Operations Strip -->
+            <div class="workspace-quick-strip card">
+              <div class="quick-strip-section phenom-quick-section">
+                <div class="quick-strip-label">
+                  <svg class="icon sm"><use href="#ic-target"/></svg>
+                  <span data-i18n="static26">الظاهرة المستهدفة:</span>
+                </div>
+                <div class="quick-phenom-chips" id="quickPhenomChipsContainer">
+                  <!-- Dynamically rendered active phenomena chips -->
+                </div>
+                <div class="quick-add-box">
+                  <input type="text" id="inputQuickPhenom" class="text-input quick-input" placeholder="أضف ظاهرة (مثال: مساجد، كشري...)" data-i18n-placeholder="static27" title="اكتب أي ظاهرة للبحث عنها مباشرة" data-i18n-title="static28">
+                  <button type="button" id="btnQuickAddPhenom" class="btn small primary" title="إضافة الظاهرة لقائمة البحث" data-i18n-title="static29">
+                    <svg class="icon sm"><use href="#ic-plus"/></svg>
+                    <span data-i18n="static30">إضافة</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="quick-strip-divider"></div>
+
+              <div class="quick-strip-section area-quick-section">
+                <div class="quick-strip-label">
+                  <svg class="icon sm"><use href="#ic-grid"/></svg>
+                  <span data-i18n="static31">الشبكة:</span>
+                  <span class="pill blue" id="quickGridBadge" data-i18n="static32">0 مربعاً</span>
+                </div>
+                <button type="button" id="btnQuickGoRecords" class="btn small primary-ghost" title="عرض جدول البيانات الكامل وتصدير الملفات" data-i18n-title="static33">
+                  <svg class="icon sm"><use href="#ic-database"/></svg>
+                  <span><span data-i18n="navRecords">سجل البيانات</span> (<b id="quickRecordsBadge">0</b>)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Animated Extraction Progress Banner (Visible when running) -->
+            <div class="live-progress-card card hidden" id="liveExtractionProgressCard">
+              <div class="live-progress-info">
+                <div class="flex gap4">
+                  <span class="live-dot status-running"></span>
+                  <strong id="liveProgressTitle" data-i18n="static34">جاري مسح المربع...</strong>
+                </div>
+                <div class="flex gap4">
+                  <span class="caption" id="liveProgressDetails" data-i18n="static35">المعالم المرصودة: 0</span>
+                  <span class="pill green num" id="liveProgressPercent">0%</span>
+                </div>
+              </div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="liveProgressBarFill" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Full-width Map Canvas Host -->
+            <div id="workspaceMapContainer" class="workspace-map-host">
+              <section class="map-wrap card" id="mapWrapperCard">
+              <div class="map-head">
+                <div>
+                  <strong data-i18n="mapTitle">خريطة منطقة الدراسة</strong>
+                  <div class="caption" data-i18n="mapSubtitle">شبكة المربعات والمعالم المرصودة مباشرة من Google Maps</div>
+                </div>
+                <div class="map-head-actions">
+                  <button type="button" id="btnMapToolPan" class="btn small" data-i18n-title="fitArea">
+                    <svg class="icon sm"><use href="#ic-map"/></svg>
+                    <span data-i18n="fitArea">توسيط المنطقة</span>
+                  </button>
+                  <button type="button" id="btnLockView" class="btn small" aria-pressed="false" data-i18n-title="lockView">
+                    <svg class="icon sm"><use href="#ic-lock"/></svg>
+                    <span data-i18n="lockView">تثبيت المشهد</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="map-canvas">
+                <div id="map"></div>
+
+                <div id="gridStatusLegend" class="map-legend" aria-label="دليل ألوان الخلايا" data-i18n-aria-label="static38">
+                  <span><i class="lg-pending"></i><span data-i18n="lgPending">قيد الانتظار</span></span>
+                  <span><i class="lg-active"></i><span data-i18n="lgActive">جاري المسح</span></span>
+                  <span><i class="lg-done"></i><span data-i18n="lgDone">مكتملة</span></span>
+                  <span><i class="lg-empty"></i><span data-i18n="lgEmpty">خالية</span></span>
+                </div>
+                <div id="mapSymbolLegend" class="map-symbol-legend" role="list" data-i18n-aria-label="categorySymbols"></div>
+              </div>
+
+              <div class="map-foot">
+                <span><span data-i18n="mapProvider">خرائط Google</span> · <span class="mono">WGS 84</span></span>
+                <span class="mono" id="mapCellsFoot">0</span><span id="mapRenderNotice" class="caption" role="status"></span>
+                <label class="discovery-visibility"><input id="showUnscannedDiscoveries" type="checkbox"><span data-i18n="showEarlyDiscoveries">إظهار اكتشافات الخلايا التي لم يبدأ فحصها</span></label>
+                <span id="mapDiscoveryNotice" class="caption" role="status"></span>
+              </div>
+            </section>
+            </div>
+
+            <!-- Table Resizer Handle (Draggable Splitter) -->
+            <div class="table-resizer-handle" id="tableResizer" title="اسحب للأعلى أو الأسفل لتعديل حجم الجدول والخريطة" data-i18n-title="static39" role="separator" aria-orientation="horizontal">
+              <div class="table-resizer-grip"></div>
+            </div>
+
+            <!-- Resizable Table Section Host -->
+            <div id="workspaceTableContainer" class="workspace-table-host">
+              <section class="table-card card workspace-table-section" id="tableSectionDrawer">
+              <div class="table-head">
+                <div class="table-title-wrap">
+                  <button type="button" class="drawer-toggle" id="btnToggleDrawer" aria-expanded="true" title="انقر لتكبير أو تصغير الجدول" data-i18n-title="static40">
+                    <span class="drawer-chevron-icon" id="drawerChevron">▾</span>
+                  </button>
+                  <div>
+                    <h2 class="section-title">
+                      <svg class="icon sm"><use href="#ic-database"/></svg>
+                      <span data-i18n="tableTitle">سجل المعالم والظواهر المستخرجة</span>
+                      (<span id="tableRecordCount">0</span>)
+                    </h2>
+                    <div class="caption" data-i18n="tableSubtitle">فلترة مستقلة لكل فئة وظاهرة لمنع التداخل</div>
+                  </div>
+                </div>
+
+                <div class="table-actions">
+                  <div class="table-filter-box">
+                    <svg class="icon sm filter-icon"><use href="#ic-search"/></svg>
+                    <input type="text" id="tableFilterInput" class="filter-text-input" placeholder="تصفية بالاسم، الحي، العنوان، الهاتف…" data-i18n-placeholder="filterPlaceholder" data-i18n-placeholder="filterPlaceholder">
+                  </div>
+
+                  <div class="export-menu" id="exportMenu">
+                    <button type="button" class="btn small primary" id="btnExportMenuTrigger" aria-haspopup="true" aria-expanded="false">
+                      <svg class="icon sm"><use href="#ic-download"/></svg>
+                      <span data-i18n="btnExport">تصدير</span>
+                      <svg class="icon sm"><use href="#ic-chevron"/></svg>
+                    </button>
+
+                    <div class="export-menu-panel" id="exportMenuPanel" role="menu">
+                      <button type="button" id="btnExportExcel" class="export-item" role="menuitem">
+                        <span class="dot excel"></span><span data-i18n="static41">Excel (.xlsx) مع شيت لكل فئة</span>
+                      </button>
+                      <button type="button" id="btnExportKml" class="export-item" role="menuitem">
+                        <span class="dot kml"></span><span data-i18n="static42">Google Earth KML (مجلدات هرمية)</span>
+                      </button>
+                      <button type="button" id="btnExportKmz" class="export-item" role="menuitem">
+                        <span class="dot kmz"></span><span data-i18n="static43">KMZ Bundle مضغوط</span>
+                      </button>
+                      <button type="button" id="btnExportGeoJson" class="export-item" role="menuitem">
+                        <span class="dot geojson"></span><span data-i18n="static44">GeoJSON لنظم GIS</span>
+                      </button>
+                      <button type="button" id="btnExportJson" class="export-item" role="menuitem">
+                        <span class="dot json"></span><span data-i18n="static45">JSON مصفوفة بيانات</span>
+                      </button>
+                      <button type="button" id="btnExportCsv" class="export-item" role="menuitem">
+                        <span class="dot csv"></span><span>CSV (UTF-8 BOM)</span>
+                      </button>
+                      <button type="button" id="btnExportShp" class="export-item" role="menuitem"><span>Shapefile (.zip)</span></button>
+                      <button type="button" id="btnExportSeparateKml" class="export-item" role="menuitem">
+                        <span class="dot sep"></span><span data-i18n="static46">KML منفصل لكل فئة على حدة</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-tabs-row">
+                <div class="phenomena-segmented-tabs" id="phenomenaTabsContainer">
+                  <button type="button" class="p-tab active" data-phenom="all">
+                    <span data-i18n="tabAll">كافة المعالم</span> (<span id="tabCountAll">0</span>)
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-scroll-wrap">
+                <table class="colldata-table" id="colldataTable">
+                  <thead>
+                    <tr>
+                      <th style="width:46px" data-i18n="thNo">م</th>
+                      <th data-i18n="thName">اسم المعلم</th>
+                      <th data-i18n="thNameEn">English Name</th>
+                      <th data-i18n="thMainCat">الفئة الرئيسية</th>
+                      <th data-i18n="thSubCat">التصنيف الفرعي</th>
+                      <th data-i18n="thPhenom">الظاهرة</th>
+                      <th class="coord-th" data-i18n="thX">X / Longitude</th>
+                      <th class="coord-th" data-i18n="thY">Y / Latitude</th>
+                      <th data-i18n="thAddress">العنوان والحي</th>
+                      <th data-i18n="thPhone">الهاتف</th>
+                      <th data-i18n="thWebsite">الموقع</th>
+                      <th data-i18n="thHours">حالة العمل</th>
+                      <th data-i18n="thRating">التقييم</th>
+                      <th data-i18n="thSource">المصدر</th>
+                      <th data-i18n="thCell">المربع</th>
+                      <th style="width:70px" data-i18n="thMap">الخريطة</th>
+                      <th style="width:52px" data-i18n="thDelete">حذف</th>
+                    </tr>
+                  </thead>
+                  <tbody id="colldataTableBody">
+                    <tr>
+                      <td colspan="17" class="table-empty-msg" data-i18n="static47">
+                        لم يتم استخراج أي بيانات بعد. حدّد الظاهرات، ارسم منطقة الدراسة، ثم اضغط «بدء الاستخراج».
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="table-foot">
+                <span data-i18n="tableFoot">البيانات محفوظة محلياً داخل المتصفح فقط</span>
+                <div class="pagination">
+                  <span id="paginationInfo" data-i18n="static48">عرض 0 من أصل 0</span>
+                  <button type="button" id="btnPrevPage" class="btn small" disabled data-i18n="prevPage">السابق</button>
+                  <span id="pageIndicator" class="page-current-indicator">1 / 1</span>
+                  <button type="button" id="btnNextPage" class="btn small" disabled data-i18n="nextPage">التالي</button>
+                </div>
+              </div>
+            </section>
+            </div>
+
+          </div>
+        </div>
+
+                <!-- ══════════════════════════════════════════════════════════════════════
+             VIEW 2: الظاهرات المستهدفة ومكتبة الظواهر (واجهة منقسمة لجزئين متوازنين)
+             ══════════════════════════════════════════════════════════════════════ -->
+        <div id="view-phenomena" class="dalil-view hidden">
+          <div class="phenomena-split-layout">
+
+            <!-- الجانب الأيمن: إدارة الظواهر المستهدفة والإدخال المخصص والمقترحات السريعة -->
+            <div class="phenomena-input-panel card">
+              <div class="flex between">
+                <div>
+                  <h2 class="section-title" data-i18n="phenomUnifiedTitle">الظاهرات المستهدفة والمسميات</h2>
+                  <p class="caption" data-i18n="phenomUnifiedSubtitle">أضف الظواهر المراد استخراجها يدوياً أو اختر من المقترحات السريعة.</p>
+                </div>
+                <div class="flex gap4">
+                  <span class="pill green"><span id="activePhenomenaCount">0</span> <span data-i18n="lblActiveCount">ظاهرة نشطة</span></span>
+                  <button type="button" id="btnClearAllPhenomena" class="btn ghost small danger-text" title="مسح كافة الظاهرات" data-i18n-title="clearAll" data-i18n="clearAll">مسح الكل</button>
+                </div>
+              </div>
+
+              <!-- حقل الإدخال اليدوي المريح بدون أي اقتطاع -->
+              <div class="phenom-input-box">
+                <input type="text" id="inputNewPhenomenon" class="text-input" placeholder="اكتب اسم أي ظاهرة" data-i18n-placeholder="inputPlaceholder" data-i18n-placeholder="inputPlaceholder">
+                <button type="button" id="btnAddPhenomenon" class="btn primary" title="إضافة الظاهرة" data-i18n-title="static49">
+                  <svg class="icon sm"><use href="#ic-plus"/></svg>
+                  <span data-i18n="btnAdd">إضافة</span>
+                </button>
+              </div>
+
+              <!-- خيار دعم التسميات المزدوجة -->
+              <label class="toggle-line inline-toggle">
+                <span>
+                  <strong data-i18n="bilingualToggleTitle">دعم التسميات المزدوجة (عربي + إنجليزي)</strong>
+                  <small class="source-desc" data-i18n="bilingualToggleDesc">يبحث بالاسم العربي ومرادفه الإنجليزي لضمان استخراج المعالم المسجلة بأسماء لاتينية.</small>
+                </span>
+                <input type="checkbox" id="sideBilingualToggle" checked>
+              </label>
+
+              <!-- نمط خطة الاستعلامات والتغطية -->
+              <div class="field" style="margin-top:10px">
+                <label for="selectQueryPlanMode" data-i18n="lblQueryPlanMode">نمط خطة الاستعلامات (Query Plan Mode):</label>
+                <select id="selectQueryPlanMode">
+                  <option value="comprehensive" selected data-i18n="optQueryPlanComp">شامل (Comprehensive) — فحص 100% من الأنشطة الفرعية دون دمج</option>
+                  <option value="balanced" data-i18n="optQueryPlanBal">متوازن (Balanced) — استخراج متوازن وتجميع ذكي</option>
+                  <option value="fast" data-i18n="optQueryPlanFast">سريع (Fast) — كلمات دلالية مجمعة لتغطية سريعة</option>
+                </select>
+              </div>
+
+              <!-- حاوية الظواهر المستهدفة المحددة حالياً -->
+              <div id="translationReviewPanel" class="translation-review hidden" role="region" data-i18n-aria-label="translationReviewTitle">
+                <h3 data-i18n="translationReviewTitle">مصطلحات بحث تحتاج تحديدًا</h3>
+                <p data-i18n="translationReviewHint">اكتب مصطلح البحث للفئات الناقصة بهذه اللغة، أو اختر الإنجليزية صراحة من إعدادات اللغة.</p>
+                <div id="missingTranslationList"></div>
+                <button type="button" class="btn primary" id="btnSaveQueryTerms" data-i18n="saveQueryTerms">حفظ مصطلحات البحث</button>
+              </div>
+              <div class="field" style="margin-top:2px">
+                <label data-i18n="lblSelectedPhenomena">الظواهر المحددة حالياً في خطة المسح:</label>
+                <div id="activePhenomenaContainer" class="chipset chips-box">
+                  <div class="empty-phenom-msg" id="emptyPhenomenaNotice" data-i18n="static50">
+                    لم تتم إضافة أي ظاهرة بعد. اكتب اسم الظاهرة واضغط «إضافة» أو اختر من المكتبة والمقترحات.
+                  </div>
+                </div>
+              </div>
+
+              <!-- مقترحات سريعة شائعة بنقرة واحدة -->
+              <div class="suggested-phenom-box">
+                <div class="suggest-head">
+                  <svg class="icon sm"><use href="#ic-target"/></svg>
+                  <span data-i18n="static51">مقترحات سريعة وشائعة (انقر للإضافة فوراً):</span>
+                </div>
+                <div class="suggest-chips-row" id="suggestedPhenomChips">
+                  <button type="button" class="suggest-chip" data-phenom="google_places:restaurant"><span data-i18n="static52">مطاعم</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:cafe"><span data-i18n="static53">مقاهٍ</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:pharmacy"><span data-i18n="static54">صيدليات</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:mosque"><span data-i18n="static55">مساجد</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:bank"><span data-i18n="static56">بنوك</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:supermarket"><span data-i18n="static57">سوبر ماركت</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:hotel"><span data-i18n="static58">فنادق</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:gas_station"><span data-i18n="static59">محطات وقود</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:hospital"><span data-i18n="static60">مستشفيات</span></button>
+                  <button type="button" class="suggest-chip" data-phenom="google_places:school"><span data-i18n="static61">مدارس</span></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- الجانب الأيسر: مكتبة التصنيفات الجغرافية الشاملة بعرض محكم ومتناسق -->
+            <div class="taxonomy-library-panel card">
+              <div class="flex between">
+                <div>
+                  <h2 class="section-title" data-i18n="static62">مكتبة التصنيفات الجغرافية الشاملة</h2>
+                  <p class="caption" data-i18n="static63">31 قطاعاً رئيسياً و 940 نشاطاً معتمداً جغرافياً</p>
+                </div>
+              </div>
+
+              <div class="tax-panel-header">
+                <div class="tax-search-wrap">
+                  <svg class="icon sm tax-search-icon"><use href="#ic-search"/></svg>
+                  <input type="text" id="taxSearchInput" class="tax-search-input" placeholder="ابحث في الفئات والأنشطة" data-i18n-placeholder="taxSearchPlaceholder" data-i18n-placeholder="taxSearchPlaceholder">
+                  <button type="button" id="btnTaxSearchClear" class="btn-tax-search-clear hidden" title="مسح البحث" data-i18n-title="static64">✕</button>
+                </div>
+                <div class="tax-quick-toolbar">
+                  <button type="button" id="btnTaxSelectAllVisible" class="btn-tax-tool" data-i18n="selectAllVisible">تحديد كل المعروض</button>
+                  <button type="button" id="btnTaxDeselectAll" class="btn-tax-tool" data-i18n="deselectAll">إلغاء التحديد</button>
+                  <span class="tax-badge" id="taxSelectedCountBadge" data-i18n="static65">0 محدد</span>
+                </div>
+              </div>
+
+              <p class="caption" data-i18n="taxonomyModelNotice">كل زر يمثل فئة واحدة؛ المرادفات والصفات ليست فئات Google إضافية.</p>
+              <div id="taxonomyTreeList" class="taxonomy-tree-list embedded-tree"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════════
+             VIEW 3: نطاق الدراسة وهندسة الشبكة والخيارات (مع الخريطة المباشرة)
+             ══════════════════════════════════════════════════════════════════════ -->
+        <div id="view-setup" class="dalil-view hidden">
+          <div class="setup-layout-container">
+
+            <!-- شبكة الجزء العلوي: عمود التحكم يميناً + عمود الخريطة الحية يساراً -->
+            <div class="setup-top-grid">
+
+              <!-- عمود التحكم (Card A + Card B) -->
+              <div class="setup-controls-col">
+                <!-- Card A: نطاق الدراسة واستيراد النطاق -->
+                <div class="card setup-card">
+                  <div class="setup-card-head">
+                    <svg class="icon"><use href="#ic-layers"/></svg>
+                    <div>
+                      <h2 class="section-title" data-i18n="setupAreaTitle">1. تحديد نطاق ومنطقة الدراسة</h2>
+                      <p class="caption" data-i18n="setupAreaSubtitle">استورد حدود المنطقة من ملف KML / KMZ أو ارسم المستطيل على الخريطة</p>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label data-i18n="lblUploadArea">استيراد النطاق من ملف (KML / KMZ / Shapefile / GeoJSON)</label>
+                    <div class="dropzone-area" id="kmlDropzone">
+                      <input type="file" id="studyAreaFileInput" accept=".kml,.kmz,.geojson,.json,.zip,.shp" class="file-hidden-input">
+                      <svg class="icon lg"><use href="#ic-upload"/></svg>
+                      <p class="drop-text" data-i18n="dropText">انقر لاختيار ملف أو اسحبه هنا</p>
+                      <p class="drop-sub">KML, KMZ, GeoJSON, Shapefile (.zip / .shp)</p>
+                      <p class="caption" data-i18n="importCrsHint">يلزم WGS84 (EPSG:4326). يُفضّل ضغط Shapefile مع ملف PRJ.</p>
+                      <button type="button" class="btn small" id="btnBrowseFiles" data-i18n="btnBrowseFiles">استعراض الملف</button>
+                    </div>
+
+                    <div id="fileUploadInfo" class="file-info-badge hidden">
+                      <svg class="icon sm ok"><use href="#ic-check"/></svg>
+                      <span id="fileNameLabel" class="file-name" data-i18n="static66">تم استيراد الملف بنجاح</span>
+
+                    </div>
+                  </div>
+
+                  <div class="field hidden" id="proximitySettings">
+                    <label for="inputSearchBufferMeters" data-i18n="searchBufferLabel">مسافة البحث حول الطريق أو النقطة (متر)</label>
+                    <input type="number" id="inputSearchBufferMeters" min="1" max="50000" step="1" value="500" inputmode="numeric">
+                    <p class="caption" data-i18n="searchBufferHint">شبكة مستطيلة حول المعالم؛ تُقبل النتائج داخل مسافة البحث فقط. المسافة من ١ إلى ٥٠٠٠٠ متر.</p>
+                  </div>
+
+                  <div class="rule"></div>
+
+                  <div class="field">
+                    <label data-i18n="lblDrawRect">رسم مستطيل منطقة الدراسة يدوياً على الخريطة</label>
+                    <div class="area-tools" role="group" data-i18n-aria-label="areaTools">
+                      <button type="button" id="btnStartDrawRect" class="btn primary" data-i18n="btnDrawRect">رسم مستطيل</button>
+                      <button type="button" id="btnDrawPolygon" class="btn" data-i18n="drawPolygon">رسم مضلع</button>
+                      <button type="button" id="btnEditArea" class="btn" data-i18n="editArea">تحرير الرؤوس</button>
+                      <button type="button" id="btnUndoArea" class="btn" data-i18n="undo">تراجع</button>
+                      <button type="button" id="btnClearStudyArea" class="btn danger-ghost" data-i18n="clearArea">حذف المنطقة</button>
+                    </div>
+                    <div class="draw-session-actions hidden" id="drawSessionActions" role="group">
+                      <button type="button" id="btnFinishDrawing" class="btn primary" data-i18n="finishDrawing">إنهاء الرسم</button>
+                      <button type="button" id="btnCancelDrawing" class="btn" data-i18n="cancelDrawing">إلغاء</button>
+                    </div>
+                    <p class="draw-hint" id="drawInstructionHint" data-i18n="static108">انقر على «رسم مستطيل» ثم حدّد زاويتي المستطيل على الخريطة المجاورة لتوليد شبكة المربعات فوراً.</p>
+                  </div>
+
+                  <div class="inline-notice study-area-status" id="studyAreaStatusBanner">
+                    <svg class="icon sm"><use href="#ic-pin"/></svg>
+                    <span><b data-i18n="static68">الحالة:</b> الخريطة خالية. لم يتم تحديد منطقة دراسة بعد.</span>
+                  </div>
+                </div>
+
+                <!-- Card B: هندسة شبكة المربعات -->
+                <div class="card setup-card">
+                  <div class="setup-card-head">
+                    <svg class="icon"><use href="#ic-grid"/></svg>
+                    <div>
+                      <h2 class="section-title" data-i18n="lblGridTitle">2. هندسة شبكة المربعات (Mesh Grid)</h2>
+                      <p class="caption" data-i18n="lblGridSubtitle">تحكم دقيق بالصفوف والأعمدة بالسحب أو الكتابة المباشرة للأرقام</p>
+                    </div>
+                    <span class="pill blue" id="cellsTotalPreviewBadge" data-i18n="static32">0 مربعاً</span>
+                  </div>
+
+                  <!-- Rows with Dual Slider & Numeric Input -->
+                  <div class="slider-field">
+                    <div class="slider-label-row">
+                      <label for="inputGridRows" data-i18n="lblRows">عدد الصفوف (Rows):</label>
+                      <div class="flex gap4">
+                        <input type="number" id="inputGridRowsNum" min="1" max="40" value="5" class="slider-number-input" title="اكتب عدد الصفوف المطلوب" data-i18n-title="static70">
+                        <span class="mono" id="labelGridRows" style="display:none">5</span>
+                      </div>
+                    </div>
+                    <input type="range" id="inputGridRows" min="1" max="40" value="5" class="styled-range">
+                  </div>
+
+                  <!-- Cols with Dual Slider & Numeric Input -->
+                  <div class="slider-field">
+                    <div class="slider-label-row">
+                      <label for="inputGridCols" data-i18n="lblCols">عدد الأعمدة (Columns):</label>
+                      <div class="flex gap4">
+                        <input type="number" id="inputGridColsNum" min="1" max="40" value="5" class="slider-number-input" title="اكتب عدد الأعمدة المطلوب" data-i18n-title="static71">
+                        <span class="mono" id="labelGridCols" style="display:none">5</span>
+                      </div>
+                    </div>
+                    <input type="range" id="inputGridCols" min="1" max="40" value="5" class="styled-range">
+                  </div>
+
+                  <div class="field" style="margin-top:14px">
+                    <label for="inputOverlapPercent" data-i18n="lblOverlap">نسبة تداخل المربعات (Overlap)</label>
+                    <select id="inputOverlapPercent">
+                      <option value="0.03" data-i18n="static72">3% (تداخل خفيف — تغطية أسرع)</option>
+                      <option value="0.05" selected data-i18n="static73">5% (موصى به هندسياً — توازن قياسي)</option>
+                      <option value="0.08" data-i18n="static74">8% (تداخل عالي — دقة أعلى للحدود)</option>
+                      <option value="0.10" data-i18n="static75">10% (فائق التداخل — ضمان عدم تفويت أي نقطة)</option>
+                    </select>
+                  </div>
+
+                  <label class="toggle-line compact-toggle">
+                    <input type="checkbox" id="checkClipToStudyArea" checked>
+                    <span data-i18n="lblClipMesh">اقتصار الشبكة على المربعات المتقاطعة مع منطقة الدراسة فقط</span>
+                  </label>
+
+                  <button type="button" id="btnGenerateGridNow" class="btn primary full-width" style="margin-top:14px">
+                    <svg class="icon sm"><use href="#ic-grid"/></svg>
+                    <span data-i18n="btnGenerateGrid">توليد وتحديث شبكة المربعات</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Live Interactive Map Host Column (Occupies the previously empty left space!) -->
+              <div class="setup-map-col" id="setupMapContainer">
+                <!-- Map wrapper card gets appended here! -->
+              </div>
+
+            </div>
+
+            <!-- Card C: خيارات محرك الاستخراج والجودة والأمان (شبكة منظمة بدون فراغات طايرة) -->
+            <div class="card setup-card setup-card-wide" id="setupOptionsCard">
+              <div class="setup-card-head">
+                <svg class="icon"><use href="#ic-sliders"/></svg>
+                <div>
+                  <h2 class="section-title" data-i18n="setupOptionsTitle">3. خيارات المتابعة ومحرك الاستخراج</h2>
+                  <p class="caption" data-i18n="setupOptionsSubtitle">ضبط مستوى التقريب والمهلة ومستويات الأمان والحفظ التراكمي وسلوك الكاميرا</p>
+                </div>
+              </div>
+
+              <div class="source-options">
+                <div class="source-field"><label for="dataSource" data-i18n="dataSource">مصدر البحث</label><select id="dataSource" class="input"><option value="google_maps_dom" selected data-i18n="sourceGoogle">Google Maps · المصدر الأساسي</option><option value="osm_overpass" data-i18n="sourceOsm">OpenStreetMap · مصدر إضافي</option></select></div>
+                <div class="source-field"><label for="searchLocale" data-i18n="searchLanguage">لغة البحث</label><select id="searchLocale" class="input"><option value="ar" data-i18n="languageArabic">العربية</option><option value="en" data-i18n="languageEnglish">الإنجليزية</option></select></div>
+                <div class="source-field hidden" id="customSearchLocaleField"><label for="customSearchLocale" data-i18n="customSearchLocale">رمز لغة آخر</label><input id="customSearchLocale" class="input" type="text" dir="ltr" value="fr" placeholder="fr-CA / zh-Hant / es-419" maxlength="64"></div>
+                <label class="toggle-line compact-toggle source-field"><input type="checkbox" id="allowEnglishSearchFallback"><span data-i18n="allowEnglishSearchFallback">السماح بالإنجليزية للفئات التي لا يتوفر لها مصطلح بهذه اللغة</span></label>
+                <p id="searchLanguageNotice" class="caption source-caption" role="status"></p>
+                <button type="button" id="btnOpenMapsPreview" class="btn small" data-i18n="openMap">فتح الخريطة ↗</button>
+                <p class="caption source-caption" data-i18n="sourceNotice">خريطة العرض مستقلة عن مصدر البحث. تُفحص الظاهرة في جميع الخلايا ثم تبدأ التالية.</p>
+              </div>
+              <div class="options-matrix-grid">
+                <!-- المجموعة 1: التقريب والمهلة والأمان -->
+                <div class="options-block">
+                  <div class="options-block-header">
+                    <svg class="icon sm"><use href="#ic-clock"/></svg>
+                    <span data-i18n="static76">السرعة ومستوى التقريب والأمان</span>
+                  </div>
+                  <div class="field">
+                    <label for="settingZoomLevel" data-i18n="lblZoom">مستوى التقريب (Zoom Level)</label>
+                    <select id="settingZoomLevel">
+                      <option value="auto" selected data-i18n="static77">✨ تلقائي ذكي (يتكيف تلقائياً مع حجم الخلية - مستحسن)</option>
+                      <option value="12" data-i18n="static78">12 — نظرة إقليمية شاملة (Regional)</option>
+                      <option value="13" data-i18n="static79">13 — نطاق مدينة كاملة (City Scale)</option>
+                      <option value="14" data-i18n="static80">14 — قطاع أو حي كبير (Large District)</option>
+                      <option value="15" data-i18n="static81">15 — مستوى الحي والشوارع العامة (Sub-district)</option>
+                      <option value="16" data-i18n="static82">16 — شوارع رئيسية (افتراضي)</option>
+                      <option value="17" data-i18n="static83">17 — شوارع فرعية وبلوكات دقيقة (Detailed)</option>
+                      <option value="18" data-i18n="static84">18 — مستوى المباني والمحلات الفردية (Venue Level)</option>
+                      <option value="19" data-i18n="static85">19 — تفاصيل دقيقة جداً للمواقع المتقاربة (High Precision)</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="settingDelayMs" data-i18n="lblDelay">المهلة بين الخلايا والأمان (Delay & Safety)</label>
+                    <select id="settingDelayMs">
+                      <option value="800" data-i18n="static86">800 ms — فائق السرعة ⚡ (عالي الخطورة)</option>
+                      <option value="1200" data-i18n="static87">1200 ms — سريع ⏱️ (خطورة متوسطة)</option>
+                      <option value="1600" selected data-i18n="static88">1600 ms — متوازن 🛡️ (موصى به - آمن ومستقر)</option>
+                      <option value="2400" data-i18n="static89">2400 ms — متمهل 🌿 (آمن جداً)</option>
+                      <option value="3600" data-i18n="static90">3600 ms — هادئ فائق الأمان 🔒</option>
+                      <option value="4800" data-i18n="static91">4800 ms — حذر استثنائي 🛡️</option>
+                    </select>
+                  </div>
+                  <div class="inline-notice compact-notice">
+                    <svg class="icon sm"><use href="#ic-alert"/></svg>
+                    <span data-i18n="optNotice">نمط المسح الزجزاجي الذكي مفعل تلقائياً لتوفير الوقت بين الخلايا المتجاورة.</span>
+                  </div>
+                </div>
+
+                <!-- المجموعة 2: سلوك الخريطة والكاميرا -->
+                <div class="options-block">
+                  <div class="options-block-header">
+                    <svg class="icon sm"><use href="#ic-map"/></svg>
+                    <span data-i18n="static92">سلوك الخريطة أثناء الاستخراج</span>
+                  </div>
+                  <div class="options-tiles-list">
+                    <label class="option-tile">
+                      <input type="checkbox" id="checkAutoPanCamera" checked>
+                      <div class="option-tile-text">
+                        <strong data-i18n="optAutoPan">ملاحقة الكاميرا للمربع الجاري فحصه</strong>
+                        <small class="source-desc" data-i18n="optAutoPanDesc">توسيط الخريطة تلقائياً فوق المربع النشط أثناء المسح.</small>
+                      </div>
+                    </label>
+                    <label class="option-tile">
+                      <input type="checkbox" id="checkZoomActiveCell" checked>
+                      <div class="option-tile-text">
+                        <strong data-i18n="optZoomActive">تكبير الخريطة على المربع النشط</strong>
+                        <small class="source-desc" data-i18n="optZoomActiveDesc">الانتقال إلى مستوى تقريب مناسب للمربع قيد المسح.</small>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- المجموعة 3: جودة البيانات وحفظ النتائج -->
+                <div class="options-block">
+                  <div class="options-block-header">
+                    <svg class="icon sm"><use href="#ic-shield"/></svg>
+                    <span data-i18n="static93">جودة البيانات والحفظ التراكمي</span>
+                  </div>
+                  <div class="options-tiles-list">
+                    <label class="option-tile">
+                      <input type="checkbox" id="checkAutoDedup" checked>
+                      <div class="option-tile-text">
+                        <strong data-i18n="optAutoDedup">حذف التكرار المكاني التلقائي</strong>
+                        <small class="source-desc" data-i18n="optAutoDedupDesc">مقارنة الإحداثيات واسم المنشأة وحذف التكرارات.</small>
+                      </div>
+                    </label>
+                    <label class="option-tile">
+                      <input type="checkbox" id="checkAccumulateData" checked>
+                      <div class="option-tile-text">
+                        <strong data-i18n="optAccumulate">حفظ النتائج تراكمياً</strong>
+                        <small class="source-desc" data-i18n="optAccumulateDesc">إضافة نتائج جديدة فوق السابقة مع تجنب التكرار.</small>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════════
+             VIEW 4: سجل البيانات ومركز التصدير الكامل (Full Records & Export Hub)
+             ══════════════════════════════════════════════════════════════════════ -->
+        <div id="view-records" class="dalil-view hidden">
+          <div class="records-full-page">
+
+            <!-- Records Hub Header -->
+            <div class="card page-slab records-header-slab">
+              <div class="flex between" style="margin-bottom:14px">
+                <div>
+                  <h2 class="section-title records-main-title" data-i18n="recordsFullTitle">مركز البيانات والتصدير المكاني</h2>
+                  <p class="caption" data-i18n="recordsFullSubtitle">استعراض تفصيلي وشامل لكافة المعالم المستخرجة مع إمكانية التصدير المباشر لجميع صيغ الـ GIS وإكسيل.</p>
+                </div>
+                <div class="flex gap4">
+                  <button type="button" id="btnExportExcelDirect" class="btn small primary">
+                    <svg class="icon sm"><use href="#ic-download"/></svg>
+                    <span>Excel (.xlsx)</span>
+                  </button>
+                  <button type="button" id="btnExportKmlDirect" class="btn small">
+                    <svg class="icon sm"><use href="#ic-download"/></svg>
+                    <span>Google Earth KML</span>
+                  </button>
+                  <button type="button" id="btnExportGeoJsonDirect" class="btn small">
+                    <svg class="icon sm"><use href="#ic-download"/></svg>
+                    <span>GeoJSON</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- KPI Metrics Strip for Records -->
+              <div class="records-kpi-grid">
+                <div class="kpi-mini-card">
+                  <span class="kpi-mini-icon blue"><svg class="icon sm"><use href="#ic-pin"/></svg></span>
+                  <div>
+                    <div class="kpi-mini-num" id="recKpiPlaces">0</div>
+                    <div class="kpi-mini-label" data-i18n="static94">إجمالي المعالم المرصودة</div>
+                  </div>
+                </div>
+                <div class="kpi-mini-card">
+                  <span class="kpi-mini-icon green"><svg class="icon sm"><use href="#ic-target"/></svg></span>
+                  <div>
+                    <div class="kpi-mini-num" id="recKpiCoords">0</div>
+                    <div class="kpi-mini-label" data-i18n="static95">بإحداثيات جغرافية (X, Y)</div>
+                  </div>
+                </div>
+                <div class="kpi-mini-card">
+                  <span class="kpi-mini-icon orange"><svg class="icon sm"><use href="#ic-layers"/></svg></span>
+                  <div>
+                    <div class="kpi-mini-num" id="recKpiCategories">0</div>
+                    <div class="kpi-mini-label" data-i18n="static96">تصنيفات وفئات مميزة</div>
+                  </div>
+                </div>
+                <div class="kpi-mini-card">
+                  <span class="kpi-mini-icon violet"><svg class="icon sm"><use href="#ic-shield"/></svg></span>
+                  <div>
+                    <div class="kpi-mini-num" id="recKpiDup">0</div>
+                    <div class="kpi-mini-label" data-i18n="static97">مستبعدات التكرار المكاني</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dedicated Export Hub Cards -->
+              <div class="records-export-grid">
+                <div class="export-spec-card">
+                  <div class="export-spec-top">
+                    <span class="export-tag excel">Excel</span>
+                    <strong data-i18n="static98">جداول ميكروسوفت إكسيل (.xlsx)</strong>
+                  </div>
+                  <p class="export-spec-desc" data-i18n="static99">تصدير منظم مع ورقة عمل (Sheet) مستقلة لكل فئة وظاهرة وإحصائيات كاملة.</p>
+                  <button type="button" id="btnExportExcelSpec" class="btn small primary full-width">
+                    <svg class="icon sm"><use href="#ic-download"/></svg>
+                    <span data-i18n="static100">تصدير ملف Excel</span>
+                  </button>
+                </div>
+
+                <div class="export-spec-card">
+                  <div class="export-spec-top">
+                    <span class="export-tag kml">KML / KMZ</span>
+                    <strong>Google Earth & Pro</strong>
+                  </div>
+                  <p class="export-spec-desc" data-i18n="static101">طبقات مكانية ثلاثية الأبعاد هرمية بنقاط ملونة حسب الفئة وبيانات المعلم.</p>
+                  <div class="two-cols">
+                    <button type="button" id="btnExportKmlSpec" class="btn small full-width">
+                      <span>KML</span>
+                    </button>
+                    <button type="button" id="btnExportKmzSpec" class="btn small full-width">
+                      <span>KMZ</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="export-spec-card">
+                  <div class="export-spec-top">
+                    <span class="export-tag geojson">GeoJSON</span>
+                    <strong data-i18n="static102">نظم المعلومات الجغرافية GIS</strong>
+                  </div>
+                  <p class="export-spec-desc" data-i18n="static103">متوافق 100% مع ArcGIS Pro و QGIS ومنصات التحليل المكاني WGS84.</p>
+                  <button type="button" id="btnExportGeoJsonSpec" class="btn small full-width">
+                    <svg class="icon sm"><use href="#ic-download"/></svg>
+                    <span data-i18n="static104">تصدير GeoJSON</span>
+                  </button>
+                </div>
+
+                <div class="export-spec-card">
+                  <div class="export-spec-top">
+                    <span class="export-tag csv">CSV / JSON</span>
+                    <strong data-i18n="static105">تنسيقات مفتوحة ومبرمجة</strong>
+                  </div>
+                  <p class="export-spec-desc" data-i18n="static106">ملفات CSV مجهزة بترميز UTF-8 مع BOM العربي، ومصفوفات JSON برمجية.</p>
+                  <div class="two-cols">
+                    <button type="button" id="btnExportCsvSpec" class="btn small full-width">
+                      <span>CSV</span>
+                    </button>
+                    <button type="button" id="btnExportJsonSpec" class="btn small full-width">
+                      <span>JSON</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="records-view-note inline-notice">
+                <svg class="icon sm"><use href="#ic-database"/></svg>
+                <span data-i18n="static107">جميع المعالم والبيانات المستخرجة يتم تحديثها ومزامنتها لحظياً في الجدول أدناه ومع الخريطة.</span>
+              </div>
+            </div>
+
+            <!-- Table Host in Records View -->
+            <div id="recordsTableContainer" class="records-table-host">
+              <!-- tableSectionDrawer gets appended here when in records view! -->
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════════
+             VIEW 5: عن منصة دَلِيل والمطور (About DALIL & Ahmad Ibrahim)
+             ══════════════════════════════════════════════════════════════════════ -->
+        <div id="view-about" class="dalil-view hidden">
+          <div class="about-container">
+            <section class="card page-slab about-hero-slab">
+              <div class="about-logos-wrapper"><img width="84" height="84" src="../assets/dalil_logo_dark.png" alt="DALIL" class="about-brand-logo"><img src="../assets/developer_logo.svg" alt="Ahmad Ibrahim" width="84" height="84" class="about-dev-logo"></div>
+              <h1 data-i18n="aboutTitle">عن دَلِيل</h1>
+              <p data-i18n="aboutIntro">أداة مفتوحة المصدر لتحديد منطقة دراسة، والبحث بالشبكات، ومراجعة بيانات الأماكن وتصدير البيانات المسموح باستخدامها في نظم المعلومات الجغرافية.</p>
+              <span class="pill blue">Manifest V3 · EPSG:4326</span>
+            </section>
+            <div class="about-details-grid">
+              <section class="card page-slab"><h2 data-i18n="aboutWorkflowTitle">كيف تعمل</h2><p data-i18n="aboutWorkflow">استورد حدود الدراسة أو ارسمها، واختر الفئات ومصدر البيانات ولغة البحث، ثم أنشئ الشبكة. يتحقق المحرك من الإحداثيات وملكية الخلايا ويحتفظ بسجل مصادر الاكتشاف. نسبة التقدم تعبّر عن المهام المجدولة ولا تضمن اكتمال بيانات الأماكن.</p></section>
+              <section class="card page-slab"><h2 data-i18n="aboutSourcesTitle">مصادر البيانات وحدود الاستخدام</h2><p data-i18n="aboutSources">مصدر OpenStreetMap عبر Overpass يتيح بيانات مرخصة وفق ODbL مع نسبها للمساهمين. خرائط الأساس ليست قاعدة بيانات للأماكن. مسار Google التجريبي مرتبط بشروط Google ولا يمنح حق تنزيل محتواها أو إعادة توزيعه. قد تنقص البيانات أو تختلف تغطيتها حسب الدولة والمصدر.</p><p><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap · ODbL</a> · <a href="https://developers.google.com/maps/faq" target="_blank" rel="noopener noreferrer" data-i18n="googleTerms">شروط Google Maps</a></p></section>
+              <section class="card page-slab"><h2 data-i18n="aboutDeveloperTitle">المطور</h2><h3 data-i18n="developerName">أحمد إبراهيم</h3><p data-i18n="developerRole">أخصائي نظم معلومات جغرافية وشبكات تصريف الأمطار.</p><p><a href="https://github.com/ahmadibrahim4geo" target="_blank" rel="noopener noreferrer">GitHub · ahmadibrahim4geo</a></p><p><a href="https://ahmadibrahim4geo.github.io/ahmadibrahim4geo/" target="_blank" rel="noopener noreferrer" data-i18n="developerPortfolio">البورتفوليو</a></p><p><a href="mailto:ahmadibrahim.geo@gmail.com">ahmadibrahim.geo@gmail.com</a></p></section>
+              <section class="card page-slab"><h2 data-i18n="aboutContributeTitle">المساهمة والدعم</h2><p data-i18n="aboutContribute">شارك الأخطاء والاقتراحات القابلة لإعادة الاختبار عبر GitHub Issues. راجع دليل المساهمة وسياسة الإبلاغ الأمني في المستودع. يمكن التواصل مع المطور بالبريد بشأن التعاون والدعم.</p><p><a href="https://github.com/ahmadibrahim4geo/DALIL/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a> · <a href="https://github.com/ahmadibrahim4geo/DALIL" target="_blank" rel="noopener noreferrer" data-i18n="projectRepository">مستودع المشروع</a></p></section>
+              <section class="card page-slab"><h2 data-i18n="aboutLicensesTitle">التراخيص والموارد</h2><p data-i18n="aboutLicenses">ترخيص المشروع المعلن MIT. تبقى تراخيص المكتبات والرموز وبيانات المصادر مستقلة. سجل الموارد يوضح إصداراتها ومصادرها وحدود التحقق.</p><a href="../docs/DEPENDENCIES.md" target="_blank" data-i18n="dependencyRegister">سجل التبعيات والموارد</a></section>
+              <section class="card page-slab"><h2 data-i18n="aboutPrivacyTitle">المعالجة والخصوصية</h2><p data-i18n="aboutPrivacy">تُحفظ حالة العمل داخل المتصفح. تُرسل كلمات البحث وحدود الخلايا إلى المصدر المختار، وتتصل طبقات الخريطة بمزوديها. لا يختلق المحرك حقولاً أو إحداثيات مفقودة، ولا يتجاوز حظر المصادر أو حدود طلباتها.</p></section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- مكتبات النظام الجغرافي -->
+  <script src="../lib/leaflet.js"></script>
+  <script src="../lib/xlsx.full.min.js"></script>
+  <script src="../core/category-registry.js"></script>
+  <script src="../core/search-languages.js"></script>
+  <script src="../lib/taxonomy-engine.js"></script>
+  <script src="../lib/smart-brands.js"></script>
+  <script src="../lib/spatial-utils.js"></script>
+  <script src="../core/symbology.js"></script>
+  <script src="../lib/export-utils.js"></script>
+  <script src="../background/grid-presets.js"></script>
+  <script src="../core/workspace-state.js"></script>
+  <script src="../core/map-controls.js"></script>
+  <script src="../core/grid-presentation.js"></script>
+  <script src="../core/i18n.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

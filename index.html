@@ -1,0 +1,219 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دَلِيل | DALIL - Discovery and Acquisition of Location Information & Listings</title>
+  <link rel="icon" type="image/png" href="DALIL Chrome Exstension/icons/icon48.png">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container nav-wrap">
+      <a href="#" class="brand-link">
+        <img src="DALIL Chrome Exstension/assets/dalil_logo_light.png" id="siteLogo" alt="DALIL" class="nav-logo">
+        <div class="brand-text">
+          <h1 id="navBrandTitle">دَلِيل</h1>
+          <span id="navBrandSub">اكتشاف وجمع معلومات المواقع وسجلات الأماكن</span>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <button id="btnSiteTheme" class="btn-toggle" title="تبديل المظهر">☀️ فاتح</button>
+        <button id="btnSiteLang" class="btn-toggle" title="Switch Language">🌐 English</button>
+        <a href="#install" class="btn-cta-nav" id="btnNavLaunch">🚀 فتح الداشبورد</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="badge-pill" id="heroBadge">⚡ نسخة تطوير محلية | إضافة متصفح</div>
+      <h2 class="hero-title" id="heroTitle">استحواذ وهندسة البيانات المكانية لطبقة الذكاء المكاني</h2>
+      <p class="hero-subtitle" id="heroSubtitle">
+        المنصة الشاملة للمسح الشبكي التفاعلي واستخراج المعالم الجغرافية (POIs) وإحداثيات خط الطول (X) ودائرة العرض (Y) بدقة متناهية من خرائط جوجل لكافة دول العالم، مع التمييز المكاني الذكي والتصدير المباشر لـ ArcGIS و QGIS و Excel.
+      </p>
+
+      <div class="hero-buttons">
+        <a href="#install" class="btn-primary" id="btnHeroLaunch">🚀 تشغيل لوحة التحكم (Dashboard)</a>
+        <a href="#workflow" class="btn-secondary" id="btnHeroWorkflow">🔄 استعراض مراحل العمل (Workflow)</a>
+        <a href="https://github.com/ahmadibrahim4geo/DALIL" target="_blank" rel="noopener noreferrer" class="btn-secondary">💻 مستودع GitHub</a>
+      </div>
+
+      <!-- Banner Showcase -->
+      <div class="banner-frame">
+        <img src="DALIL Chrome Exstension/assets/12_Brand_Banner_Upscaled_3840x1360.png" alt="DALIL Official Brand Banner">
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-val">31</div>
+          <div class="stat-lbl" id="statSectorsLbl">قطاعاً جغرافياً عالمياً</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">114</div>
+          <div class="stat-lbl" id="statBranchesLbl">فرعاً تخصصياً معتمداً</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">940</div>
+          <div class="stat-lbl" id="statLeavesLbl">فئة وظاهرة مكانية دقيقة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">X & Y</div>
+          <div class="stat-lbl" id="statCoordsLbl">أولوية مطلقة للإحداثيات الرقمية</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4-Stage Workflow Section -->
+  <section class="workflow-section" id="workflow">
+    <div class="container">
+      <div class="section-head">
+        <h3 class="section-title" id="wfTitle">🔄 دورة حياة استخراج البيانات الجغرافية (DALIL 4-Stage Architecture)</h3>
+        <p class="section-desc" id="wfDesc">
+          أربع مراحل هندسية متتالية تضمن الدقة الجغرافية وتمنع ازدواجية السجلات وتعطي أولوية مطلقة لإحداثيات X و Y.
+        </p>
+      </div>
+
+      <div class="workflow-img-box">
+        <img src="DALIL Chrome Exstension/assets/dalil_process_workflow.png" alt="DALIL Process Workflow Graphic">
+      </div>
+
+      <div class="workflow-steps-grid">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h4 class="step-title" id="step1Title">المنصات الخرائطية (Map Platforms)</h4>
+          <p class="step-text" id="step1Desc">
+            التفاعل الحي مع منصات خرائط جوجل وخريطة شوارع جوجل (Roadmap) والأقمار الصناعية، مع استيراد ورسم حدود منطقة الدراسة (KML, KMZ, Shapefile, GeoJSON).
+          </p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h4 class="step-title" id="step2Title">البحث والاستكشاف (Search & Discovery)</h4>
+          <p class="step-text" id="step2Desc">
+            شجرة الفئات العالمية (31 قطاعاً / 940 فئة)، مع محرك البحث الذكي الذي يتوسع ثنائي اللغة تلقائياً (عربي + إنجليزي في الخلفية) أو كتابة أي علامة تجارية حرة.
+          </p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h4 class="step-title" id="step3Title">هيكلة البيانات والـ X & Y (Data Structuring)</h4>
+          <p class="step-text" id="step3Desc">
+            استخراج دقيق لإحداثيات خط الطول والعرض (X, Y) بدقة 6 خانات، مع الفهرسة المكانية Spatial Hash Dedup والتمييز الذكي بين العلامات التجارية المختلفة في نفس الموقع.
+          </p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <h4 class="step-title" id="step4Title">التصدير الاحترافي (GIS & BI Export)</h4>
+          <p class="step-text" id="step4Desc">
+            تصدير فوري إلى Excel (.xlsx) مبوب بأوراق عمل مستقلة لكل ظاهرة، وملفات CSV عربي مشفرة بـ BOM، وطبقات GeoJSON لـ ArcGIS و QGIS، وملفات KML ثلاثية الأبعاد.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section class="container">
+    <div class="section-head">
+      <h3 class="section-title" id="featTitle">🌟 قدرات هندسية متطورة مصممة لخبراء الـ GIS</h3>
+      <p class="section-desc" id="featDesc">
+        كل ميزة في دليل بُنيت لخدمة الباحثين والمحللين الجغرافيين ورواد الأعمال.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">📐</span>
+        <h4 class="feature-title" id="f1Title">التوليد الشبكي والقص الذكي</h4>
+        <p class="feature-text" id="f1Desc">شبكات جغرافية قابلة للضبط من 1×1 وحتى 40×40 مع نسبة تداخل هندسية وقص دقيق على حدود منطقة الدراسة لاستبعاد الخلايا الخارجية وتوفير الموارد.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🌐</span>
+        <h4 class="feature-title" id="f2Title">البحث الذكي ثنائي اللغة</h4>
+        <p class="feature-text" id="f2Desc">ابحث باللغة العربية وسيقوم محرك دليل باستخراج المعالم المسجلة بالإنجليزية في الخلفية تلقائياً، مع دعم كامل للأسماء المزدوجة.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🧹</span>
+        <h4 class="feature-title" id="f3Title">خوارزمية الفهرسة المكانية O(N)</h4>
+        <p class="feature-text" id="f3Desc">فحص مكاني سريع يستبعد التكرارات المتطابقة ويدمج السجلات مع الاحتفاظ بالأوفر تفاصيل، مع التمييز الذكي بين المتاجر المختلفة في نفس العقار.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🗺️</span>
+        <h4 class="feature-title" id="f4Title">شوارع خرائط جوجل (Google Streets)</h4>
+        <p class="feature-text" id="f4Desc">خريطة أساس رسمية مطابقة تماماً لواجهة خرائط جوجل مع العناوين الحية باللغة العربية، بالإضافة لخرائط الأقمار الصناعية والتضاريس وإزري.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">📊</span>
+        <h4 class="feature-title" id="f5Title">تصدير GIS مباشر ومبوب</h4>
+        <p class="feature-text" id="f5Desc">إكسيل مخصص بأوراق عمل مستقلة لكل ظاهرة، وإحداثيات X و Y في صدارة الأعمدة كأرقام عشرية نقية تقبل الإسقاط والتحليل الفوري.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🌓</span>
+        <h4 class="feature-title" id="f6Title">واجهة ثنائية المظهر واللغة</h4>
+        <p class="feature-text" id="f6Desc">دعم كامل للمظهر الداكن والفاتح مع تبديل تلقائي للشعار المناسب، وواجهة عربية وإنجليزية كاملة بنقرة زر واحدة.</p>
+      </div>
+    </div>
+
+    <!-- Installation Box -->
+    <div class="install-box">
+      <h3 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 8px;" id="instTitle">🚀 كيفية تثبيت وتشغيل الأداة على متصفح Google Chrome</h3>
+      <p style="color: var(--text-muted); font-size: 0.95rem;" id="instSubtitle">خطوات بسيطة لتثبيت الإضافة في أقل من دقيقة واحدة:</p>
+
+      <div class="install-steps">
+        <div class="install-step-item">
+          <div class="step-badge">1</div>
+          <div class="step-desc-wrap">
+            <h4 id="in1Title">فتح إدارة الإضافات</h4>
+            <p id="in1Desc">افتح متصفح كروم واذهب إلى <code>chrome://extensions</code> ثم فعّل <strong>وضع مطور البرامج (Developer mode)</strong> في الزاوية العلوية.</p>
+          </div>
+        </div>
+
+        <div class="install-step-item">
+          <div class="step-badge">2</div>
+          <div class="step-desc-wrap">
+            <h4 id="in2Title">تحميل المجلد المفكوك</h4>
+            <p id="in2Desc">اضغط على زر <strong>تحميل حزمة مفكوكة (Load unpacked)</strong> واختر مجلد <code>DALIL Chrome Exstension</code>.</p>
+          </div>
+        </div>
+
+        <div class="install-step-item">
+          <div class="step-badge">3</div>
+          <div class="step-desc-wrap">
+            <h4 id="in3Title">بدء الاستخدام فوراً</h4>
+            <p id="in3Desc">ثبّت أيقونة دليل في شريط الأدوات، ثم انقر عليها واضغط <strong>فتح الداشبورد</strong> لبدء رحلة المسح الجغرافي!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <img src="DALIL Chrome Exstension/assets/dalil_logo_light.png" id="footerLogo" alt="DALIL" class="footer-logo">
+      <h3 style="font-size: 1.2rem; font-weight: 800;" id="footTitle">دَلِيل | DALIL</h3>
+      <p style="color: var(--brand-cyan); font-size: 0.85rem; font-weight: 700;" id="footSubtitle">Discovery and Acquisition of Location Information & Listings</p>
+      
+      <div class="footer-links">
+        <a href="#install" id="linkDash">لوحة التحكم</a>
+        <a href="https://github.com/ahmadibrahim4geo/DALIL" target="_blank" rel="noopener noreferrer">مستودع GitHub</a>
+        <a href="#workflow" id="linkWf">دورة العمل</a>
+      </div>
+
+      <p class="footer-copy">© 2026 دَلِيل (DALIL) — منصة اكتشاف وجمع معلومات المواقع وسجلات الأماكن. جميع الحقوق محفوظة.</p>
+    </div>
+  </footer>
+
+  <!-- Site Interactive Controller Script (Bilingual & Theme) -->
+  <script src="site.js"></script>
+</body>
+</html>

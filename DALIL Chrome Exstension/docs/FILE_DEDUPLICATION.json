@@ -1,0 +1,380 @@
+{
+  "schemaVersion": 1,
+  "method": "SHA-256 and byte length; references rewritten before exact file removal",
+  "removedFiles": 62,
+  "reclaimedBytes": 13504455,
+  "entries": [
+    {
+      "sha256": "0c34c9b231f3d767b6961de6d1e87c4ca9535a4f6c2ed4dfe60bb48b73626254",
+      "bytes": 2188,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/api-calling.md",
+      "remove": "skills/chrome-extensions/references/extensions/api-calling.md"
+    },
+    {
+      "sha256": "0a79f08a39a1835b7b7b7bf95e05cd33c4e4691efe6b75b1c59057260101fbd0",
+      "bytes": 4036,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/auth-identity.md",
+      "remove": "skills/chrome-extensions/references/extensions/auth-identity.md"
+    },
+    {
+      "sha256": "9439394dc38f49ba1147cde2508741f16825f8659c2c97925b71abe6af104d6c",
+      "bytes": 3506,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/content-scripts.md",
+      "remove": "skills/chrome-extensions/references/extensions/content-scripts.md"
+    },
+    {
+      "sha256": "c69c6d409e7a1adb00786541f3a857e0770867fb23bb7aa6bb76ed35fffb850b",
+      "bytes": 1844,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/context-menus.md",
+      "remove": "skills/chrome-extensions/references/extensions/context-menus.md"
+    },
+    {
+      "sha256": "3169a8f2f636a912212cbd12636a58337b1df07b333ea5818aec6eea50398228",
+      "bytes": 4810,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/csp-sandbox.md",
+      "remove": "skills/chrome-extensions/references/extensions/csp-sandbox.md"
+    },
+    {
+      "sha256": "4b986713921da1a1e12dd68da5ee8684e43b8a084f323cced503bcb8dc8b8b03",
+      "bytes": 2794,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/declarative-net-request.md",
+      "remove": "skills/chrome-extensions/references/extensions/declarative-net-request.md"
+    },
+    {
+      "sha256": "816bd0e240a6814713b59f045461c6c24e54502b302425abe463c34f932babf7",
+      "bytes": 2889,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/devtools.md",
+      "remove": "skills/chrome-extensions/references/extensions/devtools.md"
+    },
+    {
+      "sha256": "a996281d5482fa145a7912c92f71fe4eb582a0e91e674f9fef02379aecb0fce3",
+      "bytes": 2756,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/icons.md",
+      "remove": "skills/chrome-extensions/references/extensions/icons.md"
+    },
+    {
+      "sha256": "c6bddb3c51c0b0f36d302e7dfde9558dea5eb5febccda315e911119a6e08cea3",
+      "bytes": 4805,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/media-capture.md",
+      "remove": "skills/chrome-extensions/references/extensions/media-capture.md"
+    },
+    {
+      "sha256": "d4c4d84caa6761a5afb31f013ac780c2db157f3a14a23b6c0070730141dbf254",
+      "bytes": 4214,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/message-passing.md",
+      "remove": "skills/chrome-extensions/references/extensions/message-passing.md"
+    },
+    {
+      "sha256": "e310ccccc673bb4cb4c4ed42a8eb821af30e271145ee06db79f62649def4bd5c",
+      "bytes": 1819,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/omnibox.md",
+      "remove": "skills/chrome-extensions/references/extensions/omnibox.md"
+    },
+    {
+      "sha256": "b9d248c90380a31d171429b6bb1c007f897647acb83f83c98e0018260d6ae299",
+      "bytes": 4641,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/permissions.md",
+      "remove": "skills/chrome-extensions/references/extensions/permissions.md"
+    },
+    {
+      "sha256": "2a9567e5b431910702542707a09357f2031969238bda7807155dbecb1a317fb4",
+      "bytes": 2378,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/popup-ui.md",
+      "remove": "skills/chrome-extensions/references/extensions/popup-ui.md"
+    },
+    {
+      "sha256": "f376c73354ec804dc00dc1e14d0fec8f19da79f5d7c141bd5a6b40d6e49e0330",
+      "bytes": 3835,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/prompt-api.md",
+      "remove": "skills/chrome-extensions/references/extensions/prompt-api.md"
+    },
+    {
+      "sha256": "6149ec9e5a1185486ba7157d631a24525b41377d4d2c4af13058ea2f6e2715d1",
+      "bytes": 4591,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/service-worker.md",
+      "remove": "skills/chrome-extensions/references/extensions/service-worker.md"
+    },
+    {
+      "sha256": "7e6b68b9aff6532495b8d89af097bb3c0f72b3a329c92a598be3ca50a43ed15c",
+      "bytes": 4480,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/side-panel.md",
+      "remove": "skills/chrome-extensions/references/extensions/side-panel.md"
+    },
+    {
+      "sha256": "208736186cdc606d4d98efe64ea17f1087f13755415360d59035879e7580dde2",
+      "bytes": 1965,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/storage.md",
+      "remove": "skills/chrome-extensions/references/extensions/storage.md"
+    },
+    {
+      "sha256": "f16f568aaa5015985a6fc03c748f2f85ab66284e510ed0e782f637f3ae492622",
+      "bytes": 3756,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/tab-management.md",
+      "remove": "skills/chrome-extensions/references/extensions/tab-management.md"
+    },
+    {
+      "sha256": "9f77cbd366392ad64be07bb566104c79ff6eb0fbc2b3629495376bc7e23cd83d",
+      "bytes": 9414,
+      "keep": ".agents/skills/chrome-extensions/references/extensions/user-scripts.md",
+      "remove": "skills/chrome-extensions/references/extensions/user-scripts.md"
+    },
+    {
+      "sha256": "52aad75138110ffe1b4d21aa1abe702ad796b7627fbb027a482d939c30b29e1b",
+      "bytes": 5786,
+      "keep": ".agents/skills/chrome-extensions/references/webstore/chromewebstore-template.md",
+      "remove": "skills/chrome-extensions/references/webstore/chromewebstore-template.md"
+    },
+    {
+      "sha256": "70dda79e2d5e2d574b10c0121c2f9ea7ab6d644229af570d93c69042f2ef3f98",
+      "bytes": 4247,
+      "keep": ".agents/skills/chrome-extensions/references/webstore/privacy-policy.md",
+      "remove": "skills/chrome-extensions/references/webstore/privacy-policy.md"
+    },
+    {
+      "sha256": "5d13e2a60b823f82411ec97c75736aa1395dc387e1354c0c05b52a109c22c45f",
+      "bytes": 7074,
+      "keep": ".agents/skills/chrome-extensions/references/webstore/review-checklist.md",
+      "remove": "skills/chrome-extensions/references/webstore/review-checklist.md"
+    },
+    {
+      "sha256": "394978cc316486da9a35a30344e380bf072db7d25b54f89a9f285d98660fafb0",
+      "bytes": 8033,
+      "keep": ".agents/skills/chrome-extensions/references/webstore/store-listing.md",
+      "remove": "skills/chrome-extensions/references/webstore/store-listing.md"
+    },
+    {
+      "sha256": "c67d9e4ba9da93ed0da8b0147235e5890aa24e659548f65b7765c5af0a470c3f",
+      "bytes": 26456,
+      "keep": ".agents/skills/chrome-extensions/SKILL.md",
+      "remove": "skills/chrome-extensions/SKILL.md"
+    },
+    {
+      "sha256": "9695e4c3698458dcbe0864bd6ce1b2626e7471ca27945d0b378d038c3147a472",
+      "bytes": 3588,
+      "keep": ".agents/skills/gis-spatial-mesh-engine/SKILL.md",
+      "remove": "skills/gis-spatial-mesh-engine/SKILL.md"
+    },
+    {
+      "sha256": "a601cb0c68731bb5a0cef32143468ce7dbff358e4c21b4e0aeea58a7537e9e12",
+      "bytes": 5314,
+      "keep": ".agents/skills/google-maps-spatial-scraper/SKILL.md",
+      "remove": "skills/google-maps-spatial-scraper/SKILL.md"
+    },
+    {
+      "sha256": "64d4192a26e902b8f17a5e12dacf8e19d1a2b2c13a008d84ee84430698248a28",
+      "bytes": 1507366,
+      "keep": "DALIL Chrome Exstension/assets/12_Brand_Banner_Upscaled_3840x1360.png",
+      "remove": "DALIL Chrome Exstension/assets/dalil_banner_upscaled.png"
+    },
+    {
+      "sha256": "64d4192a26e902b8f17a5e12dacf8e19d1a2b2c13a008d84ee84430698248a28",
+      "bytes": 1507366,
+      "keep": "DALIL Chrome Exstension/assets/12_Brand_Banner_Upscaled_3840x1360.png",
+      "remove": "DALIL_Complete_Brand_Package/12_Brand_Banner_Upscaled_3840x1360.png"
+    },
+    {
+      "sha256": "64d4192a26e902b8f17a5e12dacf8e19d1a2b2c13a008d84ee84430698248a28",
+      "bytes": 1507366,
+      "keep": "DALIL Chrome Exstension/assets/12_Brand_Banner_Upscaled_3840x1360.png",
+      "remove": "assets/12_Brand_Banner_Upscaled_3840x1360.png"
+    },
+    {
+      "sha256": "64d4192a26e902b8f17a5e12dacf8e19d1a2b2c13a008d84ee84430698248a28",
+      "bytes": 1507366,
+      "keep": "DALIL Chrome Exstension/assets/12_Brand_Banner_Upscaled_3840x1360.png",
+      "remove": "assets/dalil_banner_upscaled.png"
+    },
+    {
+      "sha256": "4058c7d392d3879729c74a3b4665c77096bb40f00047c15c66ad70bbf46808ec",
+      "bytes": 56779,
+      "keep": "DALIL Chrome Exstension/assets/dalil_app.ico",
+      "remove": "DALIL Chrome Exstension/icons/dalil_app.ico"
+    },
+    {
+      "sha256": "4058c7d392d3879729c74a3b4665c77096bb40f00047c15c66ad70bbf46808ec",
+      "bytes": 56779,
+      "keep": "DALIL Chrome Exstension/assets/dalil_app.ico",
+      "remove": "DALIL_Complete_Brand_Package/04_DALIL_Windows_Icon.ico"
+    },
+    {
+      "sha256": "4058c7d392d3879729c74a3b4665c77096bb40f00047c15c66ad70bbf46808ec",
+      "bytes": 56779,
+      "keep": "DALIL Chrome Exstension/assets/dalil_app.ico",
+      "remove": "assets/dalil_app.ico"
+    },
+    {
+      "sha256": "4058c7d392d3879729c74a3b4665c77096bb40f00047c15c66ad70bbf46808ec",
+      "bytes": 56779,
+      "keep": "DALIL Chrome Exstension/assets/dalil_app.ico",
+      "remove": "icons/dalil_app.ico"
+    },
+    {
+      "sha256": "4058c7d392d3879729c74a3b4665c77096bb40f00047c15c66ad70bbf46808ec",
+      "bytes": 56779,
+      "keep": "DALIL Chrome Exstension/assets/dalil_app.ico",
+      "remove": "icons/icons/dalil_app.ico"
+    },
+    {
+      "sha256": "8f0c332eb2ae73707789cd015e4f2e0471e1f9eb793edb2163dae75a6ee37617",
+      "bytes": 546103,
+      "keep": "DALIL Chrome Exstension/assets/dalil_github_banner.png",
+      "remove": "assets/dalil_github_banner.png"
+    },
+    {
+      "sha256": "6386b1b5abfb5aa26052b888a716703d8af7e58ff6525a81bd04fd1e1228756c",
+      "bytes": 214550,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_dark.png",
+      "remove": "DALIL Chrome Exstension/icons/dalil_logo_dark.png"
+    },
+    {
+      "sha256": "6386b1b5abfb5aa26052b888a716703d8af7e58ff6525a81bd04fd1e1228756c",
+      "bytes": 214550,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_dark.png",
+      "remove": "DALIL_Complete_Brand_Package/03_App_Icon_Dark_1024.png"
+    },
+    {
+      "sha256": "6386b1b5abfb5aa26052b888a716703d8af7e58ff6525a81bd04fd1e1228756c",
+      "bytes": 214550,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_dark.png",
+      "remove": "assets/dalil_logo_dark.png"
+    },
+    {
+      "sha256": "6386b1b5abfb5aa26052b888a716703d8af7e58ff6525a81bd04fd1e1228756c",
+      "bytes": 214550,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_dark.png",
+      "remove": "icons/dalil_logo_dark.png"
+    },
+    {
+      "sha256": "6386b1b5abfb5aa26052b888a716703d8af7e58ff6525a81bd04fd1e1228756c",
+      "bytes": 214550,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_dark.png",
+      "remove": "icons/icons/dalil_logo_dark.png"
+    },
+    {
+      "sha256": "80c3398abe8c32f1da05b2a856c902b3af53d43c1f33c13209a69ab34e980c3c",
+      "bytes": 296585,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_horizontal.png",
+      "remove": "DALIL Chrome Exstension/icons/dalil_logo_horizontal.png"
+    },
+    {
+      "sha256": "80c3398abe8c32f1da05b2a856c902b3af53d43c1f33c13209a69ab34e980c3c",
+      "bytes": 296585,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_horizontal.png",
+      "remove": "DALIL_Complete_Brand_Package/07_Full_Logo_Horizontal_Transparent.png"
+    },
+    {
+      "sha256": "80c3398abe8c32f1da05b2a856c902b3af53d43c1f33c13209a69ab34e980c3c",
+      "bytes": 296585,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_horizontal.png",
+      "remove": "assets/dalil_logo_horizontal.png"
+    },
+    {
+      "sha256": "80c3398abe8c32f1da05b2a856c902b3af53d43c1f33c13209a69ab34e980c3c",
+      "bytes": 296585,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_horizontal.png",
+      "remove": "icons/dalil_logo_horizontal.png"
+    },
+    {
+      "sha256": "80c3398abe8c32f1da05b2a856c902b3af53d43c1f33c13209a69ab34e980c3c",
+      "bytes": 296585,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_horizontal.png",
+      "remove": "icons/icons/dalil_logo_horizontal.png"
+    },
+    {
+      "sha256": "8c09e4962397c8a7722bdec942162fd77110b8907bc9782a5dc29b9e949d3cbb",
+      "bytes": 420887,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_light.png",
+      "remove": "DALIL Chrome Exstension/icons/dalil_logo_light.png"
+    },
+    {
+      "sha256": "8c09e4962397c8a7722bdec942162fd77110b8907bc9782a5dc29b9e949d3cbb",
+      "bytes": 420887,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_light.png",
+      "remove": "DALIL_Complete_Brand_Package/03_App_Icon_Light_1024.png"
+    },
+    {
+      "sha256": "8c09e4962397c8a7722bdec942162fd77110b8907bc9782a5dc29b9e949d3cbb",
+      "bytes": 420887,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_light.png",
+      "remove": "assets/dalil_logo_light.png"
+    },
+    {
+      "sha256": "8c09e4962397c8a7722bdec942162fd77110b8907bc9782a5dc29b9e949d3cbb",
+      "bytes": 420887,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_light.png",
+      "remove": "icons/dalil_logo_light.png"
+    },
+    {
+      "sha256": "8c09e4962397c8a7722bdec942162fd77110b8907bc9782a5dc29b9e949d3cbb",
+      "bytes": 420887,
+      "keep": "DALIL Chrome Exstension/assets/dalil_logo_light.png",
+      "remove": "icons/icons/dalil_logo_light.png"
+    },
+    {
+      "sha256": "d19da41bbcb3ac4f9d5137e9b9650213bb0402ef9ad56c8c187c19e500bb6064",
+      "bytes": 897867,
+      "keep": "DALIL Chrome Exstension/assets/dalil_process_workflow.png",
+      "remove": "DALIL_Complete_Brand_Package/14_Process_Workflow_Only_2000x800.png"
+    },
+    {
+      "sha256": "d19da41bbcb3ac4f9d5137e9b9650213bb0402ef9ad56c8c187c19e500bb6064",
+      "bytes": 897867,
+      "keep": "DALIL Chrome Exstension/assets/dalil_process_workflow.png",
+      "remove": "assets/dalil_process_workflow.png"
+    },
+    {
+      "sha256": "4c72694429fccf1cbf304b6d40e2e8dcc2ec310e6e66f44883d8cd7a50d937a7",
+      "bytes": 16322,
+      "keep": "DALIL Chrome Exstension/assets/developer_logo.svg",
+      "remove": "DALIL Chrome Exstension/icons/developer_logo.svg"
+    },
+    {
+      "sha256": "26bf36fb1654899b2c4db0fa7305e44bd2f6ad78af0349fe462bc7368d2af85f",
+      "bytes": 14402,
+      "keep": "DALIL Chrome Exstension/icons/icon128.png",
+      "remove": "icons/icon128.png"
+    },
+    {
+      "sha256": "26bf36fb1654899b2c4db0fa7305e44bd2f6ad78af0349fe462bc7368d2af85f",
+      "bytes": 14402,
+      "keep": "DALIL Chrome Exstension/icons/icon128.png",
+      "remove": "icons/icons/icon128.png"
+    },
+    {
+      "sha256": "8662e6df1db000d420530b68e56b8497bc0b3de69cc91c97dd6a50c37af58abc",
+      "bytes": 784,
+      "keep": "DALIL Chrome Exstension/icons/icon16.png",
+      "remove": "icons/icon16.png"
+    },
+    {
+      "sha256": "8662e6df1db000d420530b68e56b8497bc0b3de69cc91c97dd6a50c37af58abc",
+      "bytes": 784,
+      "keep": "DALIL Chrome Exstension/icons/icon16.png",
+      "remove": "icons/icons/icon16.png"
+    },
+    {
+      "sha256": "6c7a4155ccf9149b75566d19291e45428e895510850032113b03b0fd4b0b2cba",
+      "bytes": 2013,
+      "keep": "DALIL Chrome Exstension/icons/icon32.png",
+      "remove": "icons/icon32.png"
+    },
+    {
+      "sha256": "6c7a4155ccf9149b75566d19291e45428e895510850032113b03b0fd4b0b2cba",
+      "bytes": 2013,
+      "keep": "DALIL Chrome Exstension/icons/icon32.png",
+      "remove": "icons/icons/icon32.png"
+    },
+    {
+      "sha256": "c0f0757f0b681e5f37e3bd04616631a953175366aa01d67e2a9e9f9e52540830",
+      "bytes": 3605,
+      "keep": "DALIL Chrome Exstension/icons/icon48.png",
+      "remove": "icons/icon48.png"
+    },
+    {
+      "sha256": "c0f0757f0b681e5f37e3bd04616631a953175366aa01d67e2a9e9f9e52540830",
+      "bytes": 3605,
+      "keep": "DALIL Chrome Exstension/icons/icon48.png",
+      "remove": "icons/icons/icon48.png"
+    }
+  ]
+}

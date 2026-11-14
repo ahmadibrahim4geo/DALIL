@@ -1,0 +1,22 @@
+const assert=require('assert');
+const vm=require('vm');
+const fs=require('fs');
+const path=require('path');
+const Content=require('../content/content');
+assert.strictEqual(Content.extractCoordinatesFromUrl('https://www.google.com/maps/place/Test/@30.1,31.2,20z').hasExactCoords,false);
+assert.strictEqual(Content.extractCoordinatesFromUrl('https://www.google.com/maps/place/Test/?ll=30.1,31.2').hasExactCoords,false);
+const zero=Content.extractCoordinatesFromUrl('https://www.google.com/maps/place/Test/data=!3d0!4d0');
+assert.strictEqual(zero.hasExactCoords,true);assert.strictEqual(zero.x,0);assert.strictEqual(zero.y,0);
+assert.strictEqual(Content.extractCoordinatesFromUrl('https://www.google.com/maps/place/Test/data=!3d30!9sother!4d31').hasExactCoords,false);
+assert.strictEqual(Content.cleanWebsiteUrl('javascript:alert(1)'), '');
+assert.strictEqual(Content.cleanWebsiteUrl('https://example.org/'),'https://example.org/');
+const bounds={minLng:30,maxLng:32,minLat:29,maxLat:31};
+assert.strictEqual(Content.isPlaceInStudyOrCell(32.00001,30,{bounds}),false);
+assert.strictEqual(Content.isPlaceInStudyOrCell(Infinity,30,{bounds}),false);
+// A real content listener rejects work not prepared for the current navigation nonce.
+let listener;
+const context=vm.createContext({console,URL,setTimeout,clearTimeout,document:{},window:{},chrome:{runtime:{id:'test',onMessage:{addListener:fn=>listener=fn}}}});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../content/content.js'),'utf8'),context);
+let response;listener({action:'SCRAPE_PAGE',task:{jobId:'old',cellId:'old',queryId:'old'}},{id:'test'},r=>response=r);
+assert.strictEqual(response.errorCode,'TASK_NOT_PREPARED');
+console.log('PASS content navigation identity, exact coordinate evidence, zero coordinates, strict bounds, safe website schemes');

@@ -1,0 +1,30 @@
+# Local development and agent configuration
+.agents/
+.codex/
+**/.agent-development-log/
+.vscode/
+.idea/
+
+# Credentials and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Generated dependencies, test output and distributables
+node_modules/
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+*.log
+*.zip
+*.crx
+*.lnk
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

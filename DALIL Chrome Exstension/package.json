@@ -1,0 +1,36 @@
+{
+  "name": "dalil-chrome-extension",
+  "version": "2.0.0",
+  "description": "منصة دليل (DALIL) للمسح الجغرافي واستخراج البيانات المكانية بالشبكات التفاعلية عبر خرائط جوجل لنظم المعلومات الجغرافية والإكسيل",
+  "main": "background/background.js",
+  "scripts": {
+    "test": "node test/check_sources.js && node test/test_all.js && node test/test_grid_tool.js && node test/test_export_suite.js && node test/test_dom_ids.js && node test/test_dashboard_init.js && node test/test_comprehensive_audit.js && node test/test_extraction_fix.js && node test/test_scraper_backend.js && node test/test_content_safety.js && node test/test_job_engine.js && node test/test_sources_records.js && node test/test_taxonomy_registry.js && node test/test_export_integrity.js && node test/test_export_worker.js && node test/test_workspace_geometry.js && node test/test_import_geometry.js && node test/test_i18n_contract.js && node test/test_library_r4.js && node test/test_file_integrity.js && node test/test_search_languages.js && node test/test_content_multilingual.js && node test/test_symbol_variants.js",
+    "check": "node test/check_sources.js && node test/test_file_integrity.js",
+    "test:browser": "node test/test_browser_e2e.js",
+    "test:workspace": "node test/test_workspace_r2_browser.js",
+    "test:import": "node test/test_import_r3_browser.js",
+    "test:library": "node test/test_library_r4_browser.js",
+    "build:symbol-map": "node core/symbology-catalog.cjs",
+    "test:symbols": "node test/test_symbols_r5_browser.js",
+    "test:languages": "node test/test_search_languages_browser.js",
+    "build:symbols": "node core/symbology-catalog.cjs && node core/symbology-variants.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmadibrahim4geo/DALIL.git"
+  },
+  "keywords": [
+    "gis",
+    "google-maps",
+    "scraper",
+    "spatial-analysis",
+    "kml",
+    "shapefile",
+    "geojson",
+    "dalil",
+    "chrome-extension",
+    "manifest-v3"
+  ],
+  "author": "Ahmad Ibrahim",
+  "license": "MIT"
+}

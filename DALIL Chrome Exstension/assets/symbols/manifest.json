@@ -1,0 +1,909 @@
+{
+  "name": "@mapbox/maki",
+  "version": "8.2.0",
+  "revision": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+  "license": "CC0-1.0",
+  "renderer": "sharp 0.35.5",
+  "resources": [
+    {
+      "glyph": "airport",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/airport.svg",
+      "upstreamGitBlob": "3095aacf260cffdc236c00213ecb164713c991a0",
+      "svg": {
+        "path": "assets/symbols/airport.svg",
+        "bytes": 366,
+        "sha256": "751133450c6346b804f3ce8d4d07ecc3d691692ced42c890323dd8b4b510bcd0"
+      },
+      "png": {
+        "path": "assets/symbols/airport.png",
+        "bytes": 1754,
+        "sha256": "6427f6a98ded1348d7f67d93407f1ba1610c8a37a99e6338abbccf5b9198c7d3"
+      }
+    },
+    {
+      "glyph": "bakery",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/bakery.svg",
+      "upstreamGitBlob": "2a00e88c21fcfc7ef4269045a884ed59a65d3e0c",
+      "svg": {
+        "path": "assets/symbols/bakery.svg",
+        "bytes": 573,
+        "sha256": "d81d7e6bcf70bdf0925e296fbe7ae2543105d6e8523322ff3523d2b8d0cc4c3b"
+      },
+      "png": {
+        "path": "assets/symbols/bakery.png",
+        "bytes": 1717,
+        "sha256": "e9b06e17e6f1f0bdcd1e1008e4a2304e1391e60712c3b41729b8c8e3111c7c1f"
+      }
+    },
+    {
+      "glyph": "bank",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/bank.svg",
+      "upstreamGitBlob": "592f5fd0f13c0449fdcd3a9d13d693afdee35db1",
+      "svg": {
+        "path": "assets/symbols/bank.svg",
+        "bytes": 1578,
+        "sha256": "05c10965d2588497e0161d1efc255bbf94c99c9d8c1d0b79334d535a24e2952b"
+      },
+      "png": {
+        "path": "assets/symbols/bank.png",
+        "bytes": 1632,
+        "sha256": "de0a1f839b389f492c47b45a2a902a6c06965d8b703884ed097c53dea1ea6d27"
+      }
+    },
+    {
+      "glyph": "beach",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/beach.svg",
+      "upstreamGitBlob": "5e08cd2c5f1c9a11ceceb5b92e87ce84feb322b8",
+      "svg": {
+        "path": "assets/symbols/beach.svg",
+        "bytes": 603,
+        "sha256": "4b6031f66798babb694a5cb76b25488fad2da85a496f41ddee8a53a2d7885427"
+      },
+      "png": {
+        "path": "assets/symbols/beach.png",
+        "bytes": 1807,
+        "sha256": "cc1151e39fe2f0b2ac138803dce5a0251ed50aabaf19951913d0427bb9bb6d24"
+      }
+    },
+    {
+      "glyph": "bus",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/bus.svg",
+      "upstreamGitBlob": "6602f1661ad0a00679c5c394fe398bd336bbb770",
+      "svg": {
+        "path": "assets/symbols/bus.svg",
+        "bytes": 731,
+        "sha256": "f85a7d5c2f86a0b7579f186de305647ff7f25d30a1e00a2c1a05f38ef7c955f5"
+      },
+      "png": {
+        "path": "assets/symbols/bus.png",
+        "bytes": 1485,
+        "sha256": "2c33cbaba9a0a455b4867b513f163f88a41b1e3c230b73ec5d42d7ba92906a8e"
+      }
+    },
+    {
+      "glyph": "cafe",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/cafe.svg",
+      "upstreamGitBlob": "acfc9ed7610c922dac441791c04108126ed31540",
+      "svg": {
+        "path": "assets/symbols/cafe.svg",
+        "bytes": 523,
+        "sha256": "183ec9cbbf2fe0edd61672b9e83e1134e6a2b0511c89f3c334c3115bda0d29ea"
+      },
+      "png": {
+        "path": "assets/symbols/cafe.png",
+        "bytes": 1514,
+        "sha256": "be5145b27da0d22f50408448cf2bdd9ac5e62e733da380251792882b1e301ffd"
+      }
+    },
+    {
+      "glyph": "car-repair",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/car-repair.svg",
+      "upstreamGitBlob": "6a6fdf05e638b7bf904c6d95edd41298a19c2d89",
+      "svg": {
+        "path": "assets/symbols/car-repair.svg",
+        "bytes": 1179,
+        "sha256": "e3e2bf03f6c9c02f5bf8b917164b796cb4efc576133c1daa59bec6797eff8d2e"
+      },
+      "png": {
+        "path": "assets/symbols/car-repair.png",
+        "bytes": 1609,
+        "sha256": "257cb0e4b0b03d9c453c2f70ea9a768066fa8f16caad2514bdd1a764dc8bbed8"
+      }
+    },
+    {
+      "glyph": "car",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/car.svg",
+      "upstreamGitBlob": "5b114987e454e0ca6030853604709c316b324df8",
+      "svg": {
+        "path": "assets/symbols/car.svg",
+        "bytes": 560,
+        "sha256": "bab2e2b2772cd9dfa5e0f19f036aeaafc7c5608b53add38d97897e6397f9ff33"
+      },
+      "png": {
+        "path": "assets/symbols/car.png",
+        "bytes": 1508,
+        "sha256": "249581d8206a4742291c6eff4f77abaa65d8274f6e0729fa96a57f5162f6a952"
+      }
+    },
+    {
+      "glyph": "cemetery",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/cemetery.svg",
+      "upstreamGitBlob": "43d34afa0adea780aa1ee2826096c3683c16f0de",
+      "svg": {
+        "path": "assets/symbols/cemetery.svg",
+        "bytes": 538,
+        "sha256": "95ca74fe6bc5e1c631f95decf957ab026566128c323df417b042a8670ed61a34"
+      },
+      "png": {
+        "path": "assets/symbols/cemetery.png",
+        "bytes": 1565,
+        "sha256": "0833e0178e0614460d4adf8114bd3f9189ca432e663534d05fd986c10e30a9d4"
+      }
+    },
+    {
+      "glyph": "cinema",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/cinema.svg",
+      "upstreamGitBlob": "b3d34710681c34acf5f1c16edae4c88fc19572f7",
+      "svg": {
+        "path": "assets/symbols/cinema.svg",
+        "bytes": 764,
+        "sha256": "cb2892d75f5bcc2e51a3835f6e6e52f898aac1902e05a0ffa166a17d0095d3f8"
+      },
+      "png": {
+        "path": "assets/symbols/cinema.png",
+        "bytes": 1603,
+        "sha256": "52f393e9257fb898c21c0c14d7c2480b136a82bfb9407883864a68339d25ca3a"
+      }
+    },
+    {
+      "glyph": "clothing-store",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/clothing-store.svg",
+      "upstreamGitBlob": "3de5fc0e2557ca62d9fc77321483707de07f1d6b",
+      "svg": {
+        "path": "assets/symbols/clothing-store.svg",
+        "bytes": 221,
+        "sha256": "34d756d74c62d7a9a642bf252b9f3d20d5308614fdd01f3c4f7d4e09a25871ed"
+      },
+      "png": {
+        "path": "assets/symbols/clothing-store.png",
+        "bytes": 1455,
+        "sha256": "7fa85d4b7003d5ecd46cbfa1481144e65b8cb1e3b5166b046aad05cd93dcd2f9"
+      }
+    },
+    {
+      "glyph": "college",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/college.svg",
+      "upstreamGitBlob": "6809f7defb8e396e1d96b4c867a0e95a61ac985b",
+      "svg": {
+        "path": "assets/symbols/college.svg",
+        "bytes": 478,
+        "sha256": "7aa84a0a3c9851669af2220217511d6577611a8e860c2d52d279ad2af2ae404e"
+      },
+      "png": {
+        "path": "assets/symbols/college.png",
+        "bytes": 1813,
+        "sha256": "4b9ebbc82e506d22b20026cbc54edf44b5dd7512980e486f9f497195ff915686"
+      }
+    },
+    {
+      "glyph": "commercial",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/commercial.svg",
+      "upstreamGitBlob": "a1e68951a24a67498e43a7d8396d11b4f97d8dfd",
+      "svg": {
+        "path": "assets/symbols/commercial.svg",
+        "bytes": 268,
+        "sha256": "bc4fc93ab8f02a53bf6f79ece8e1c7780c548ffdcdad37d96acb5bb88a2a76c4"
+      },
+      "png": {
+        "path": "assets/symbols/commercial.png",
+        "bytes": 1390,
+        "sha256": "bd6ecd9e3f29b8a662d4ab15a48be2e6187355e2d1bce475931227461ac3d73f"
+      }
+    },
+    {
+      "glyph": "communications-tower",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/communications-tower.svg",
+      "upstreamGitBlob": "97377ec7197fd0984bd4929e28d62e37bfa52bba",
+      "svg": {
+        "path": "assets/symbols/communications-tower.svg",
+        "bytes": 1007,
+        "sha256": "179396fb880895f163a7b8fea9acf246d6403350867d2acd91ee08b10f98ecb8"
+      },
+      "png": {
+        "path": "assets/symbols/communications-tower.png",
+        "bytes": 1979,
+        "sha256": "e29e87cb39aa908a226b56b8e637954b753d7760e537d4c26e7b23214abb97cd"
+      }
+    },
+    {
+      "glyph": "construction",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/construction.svg",
+      "upstreamGitBlob": "396c84e43c2efff44cb43f86c54bfa66ad10dd47",
+      "svg": {
+        "path": "assets/symbols/construction.svg",
+        "bytes": 322,
+        "sha256": "99bdd2d8b0f47a3cebf3f89638fd285a138a19d3b3a9b600093aa1704d22ffd2"
+      },
+      "png": {
+        "path": "assets/symbols/construction.png",
+        "bytes": 1520,
+        "sha256": "c3cb53db95e453dc973a36b90ac202fdee1033ffaf11ebdbf66e950c3bc04832"
+      }
+    },
+    {
+      "glyph": "doctor",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/doctor.svg",
+      "upstreamGitBlob": "80b86891f88e76b897dbc401509639915be3639d",
+      "svg": {
+        "path": "assets/symbols/doctor.svg",
+        "bytes": 971,
+        "sha256": "e4eb775fdfbf7062b8985ad5ccb0c47051dd6dc006798f062557530d856979d2"
+      },
+      "png": {
+        "path": "assets/symbols/doctor.png",
+        "bytes": 1786,
+        "sha256": "a3735291f3473bd2284050bb325901deb6d99559e3fbbe28ce452f419275c4ff"
+      }
+    },
+    {
+      "glyph": "embassy",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/embassy.svg",
+      "upstreamGitBlob": "d1fb83f89e04541db677ce3bb366f79768918405",
+      "svg": {
+        "path": "assets/symbols/embassy.svg",
+        "bytes": 826,
+        "sha256": "87f1c01f29ae96c74ae8e368334494fc6926797cc978a8b52e129de153a5d12a"
+      },
+      "png": {
+        "path": "assets/symbols/embassy.png",
+        "bytes": 1578,
+        "sha256": "2edad116a91de6f1a931c12a9a402c507dba9c5f4fdcb7efee687723a2436b27"
+      }
+    },
+    {
+      "glyph": "farm",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/farm.svg",
+      "upstreamGitBlob": "e4cab89d68c7077deec73e816d65b05dd00342a3",
+      "svg": {
+        "path": "assets/symbols/farm.svg",
+        "bytes": 322,
+        "sha256": "2c681c94db3e5a08ad8d837c60549c8b8a23150814fb9b6d01a65fce4aa08b4d"
+      },
+      "png": {
+        "path": "assets/symbols/farm.png",
+        "bytes": 1430,
+        "sha256": "5d9efb0148ab44c8c983a386429353df0c56054bd584034878aef9f5380ae26e"
+      }
+    },
+    {
+      "glyph": "fast-food",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/fast-food.svg",
+      "upstreamGitBlob": "08e020a5d2cb011fb3eb61dab50f9119ce6ed35c",
+      "svg": {
+        "path": "assets/symbols/fast-food.svg",
+        "bytes": 834,
+        "sha256": "4c6fc838ef154c69c94f33469bc87b5aa150568ba2cc2a0c7b0d156c88fc951d"
+      },
+      "png": {
+        "path": "assets/symbols/fast-food.png",
+        "bytes": 1491,
+        "sha256": "e7b313241be93c966223b067e7f6177143e9d6fb116243706ae22b1fef98abd1"
+      }
+    },
+    {
+      "glyph": "fire-station",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/fire-station.svg",
+      "upstreamGitBlob": "17dfe9fd7f95403b5d6157fa98357be036204d8f",
+      "svg": {
+        "path": "assets/symbols/fire-station.svg",
+        "bytes": 415,
+        "sha256": "689449b6cd6e86deb8c6555e2d3ddd405a480ac9060e61c64c2742afe831ca91"
+      },
+      "png": {
+        "path": "assets/symbols/fire-station.png",
+        "bytes": 1836,
+        "sha256": "6cc675a7d867e99369a4d85e1b63ff2d99bb0fb77d8274600b1ede50a8c7c961"
+      }
+    },
+    {
+      "glyph": "fitness-centre",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/fitness-centre.svg",
+      "upstreamGitBlob": "6e734d0fd126ddfd7d52ad99771904819adeafb3",
+      "svg": {
+        "path": "assets/symbols/fitness-centre.svg",
+        "bytes": 278,
+        "sha256": "daa3a693cf57aee4dcd9ac8e58437c39d615bb92045afb8b5488082a1a273cc7"
+      },
+      "png": {
+        "path": "assets/symbols/fitness-centre.png",
+        "bytes": 1282,
+        "sha256": "718b2061987d7bac0574593ee46cd48e22baacb125d0857928e5a211452e0010"
+      }
+    },
+    {
+      "glyph": "fuel",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/fuel.svg",
+      "upstreamGitBlob": "fcb783d688a83b6ec2c7507c2fa3c4aa7c5a80f7",
+      "svg": {
+        "path": "assets/symbols/fuel.svg",
+        "bytes": 673,
+        "sha256": "c480ea19df667ec2723fb120bb59f15d987f2bfa0e01b6d7d75cb506531caf46"
+      },
+      "png": {
+        "path": "assets/symbols/fuel.png",
+        "bytes": 1468,
+        "sha256": "7d15b76a343b5037fdf0357b3269e5af22a2b8a4da7b2a392cea58bef200a941"
+      }
+    },
+    {
+      "glyph": "grocery",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/grocery.svg",
+      "upstreamGitBlob": "8bf2ecdbb86b6516ef7ba67a5e6c0869a1101c18",
+      "svg": {
+        "path": "assets/symbols/grocery.svg",
+        "bytes": 1380,
+        "sha256": "206dd585887ed3c066d1a79ee6eacbadd370ca76cfadb07cccd3310a42818e67"
+      },
+      "png": {
+        "path": "assets/symbols/grocery.png",
+        "bytes": 1578,
+        "sha256": "96f12964d890acfdb142277fff8247210a2aad4484a0e8307a51fb1f28fae07e"
+      }
+    },
+    {
+      "glyph": "hairdresser",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/hairdresser.svg",
+      "upstreamGitBlob": "82f5981257e0356671f29a88e1f7099533aaee89",
+      "svg": {
+        "path": "assets/symbols/hairdresser.svg",
+        "bytes": 668,
+        "sha256": "70ab4b8b86cd43b1f1f308511e61f8d2635666ce38358420393a3fbd4a5bef51"
+      },
+      "png": {
+        "path": "assets/symbols/hairdresser.png",
+        "bytes": 1712,
+        "sha256": "df7a1fa9cb785e21ecb36392165455edb3aac2e4db05efc5464de08e425f1892"
+      }
+    },
+    {
+      "glyph": "harbor",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/harbor.svg",
+      "upstreamGitBlob": "b057f678525d28fb5e29009d9c1ece2fb9ca70fd",
+      "svg": {
+        "path": "assets/symbols/harbor.svg",
+        "bytes": 853,
+        "sha256": "52c40a9eb2d36c65ce939a57ee929fdce54698926d5a785ab70533ed170498ca"
+      },
+      "png": {
+        "path": "assets/symbols/harbor.png",
+        "bytes": 1931,
+        "sha256": "924445a1be204e528eda50db3503fd5b1aaf246b9cd6a9369cbfc62e86ab06e5"
+      }
+    },
+    {
+      "glyph": "home",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/home.svg",
+      "upstreamGitBlob": "5a85cd4f96ef0989af79fac42c7082755b1669f0",
+      "svg": {
+        "path": "assets/symbols/home.svg",
+        "bytes": 706,
+        "sha256": "6c8b075ce7e6d0099e2be4dc9b41d1702f5d74ed02b6a608d4ccad6514b758de"
+      },
+      "png": {
+        "path": "assets/symbols/home.png",
+        "bytes": 1555,
+        "sha256": "e0fdf9a05883f2b23cfa9d2eb298c565693b52b944c14823e31942deeba024f6"
+      }
+    },
+    {
+      "glyph": "hospital",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/hospital.svg",
+      "upstreamGitBlob": "ae7cae000ed0b22999f39d3ad117878b0db28495",
+      "svg": {
+        "path": "assets/symbols/hospital.svg",
+        "bytes": 353,
+        "sha256": "00b76d183cdec4df12488c49835938a808b28e04606017a38d8da22834480209"
+      },
+      "png": {
+        "path": "assets/symbols/hospital.png",
+        "bytes": 1346,
+        "sha256": "21996985fc5f1626207ede6608cd615ef14b2e60cb9506ca04707c48a7fda1f3"
+      }
+    },
+    {
+      "glyph": "industry",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/industry.svg",
+      "upstreamGitBlob": "c2c8d830d486e0db88a6d3ea6b1921fa5d242f80",
+      "svg": {
+        "path": "assets/symbols/industry.svg",
+        "bytes": 427,
+        "sha256": "44a5545cfb47c74ad19b4ea50b74d43b31e5e9a2d585474259a924e748a6aa1c"
+      },
+      "png": {
+        "path": "assets/symbols/industry.png",
+        "bytes": 1454,
+        "sha256": "6edd4f79c41a32e85fab359393fc768cabae89d304e568432e12d2663ba89818"
+      }
+    },
+    {
+      "glyph": "information",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/information.svg",
+      "upstreamGitBlob": "487bc92bef3f82f06f24373dffcefe1800cba257",
+      "svg": {
+        "path": "assets/symbols/information.svg",
+        "bytes": 343,
+        "sha256": "bf9e360168db3a6c8a9f07673d7c6aae1564500a39846c885a64688742732481"
+      },
+      "png": {
+        "path": "assets/symbols/information.png",
+        "bytes": 1425,
+        "sha256": "ed8c6951cace92b4d173e00f26809588cac958524edfd75582754f8f00baf430"
+      }
+    },
+    {
+      "glyph": "library",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/library.svg",
+      "upstreamGitBlob": "18d529a12a57bb234b1d15369fc9b8e7f3ea5a8c",
+      "svg": {
+        "path": "assets/symbols/library.svg",
+        "bytes": 1958,
+        "sha256": "b00354a886a98b894a616cd00f1c53a1b3ed4e8ec9542c05eda87535b8e40b0b"
+      },
+      "png": {
+        "path": "assets/symbols/library.png",
+        "bytes": 1831,
+        "sha256": "db825948d735c8bf9989890b5db5fb0a4a23ce36e8a27f9be7059cf8ba3d4f40"
+      }
+    },
+    {
+      "glyph": "lodging",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/lodging.svg",
+      "upstreamGitBlob": "d1bde6b04f6ba97449bd014b84ce678e88343235",
+      "svg": {
+        "path": "assets/symbols/lodging.svg",
+        "bytes": 580,
+        "sha256": "cc8e756612c6aa292b257a855234da2c55612d95831d4f10fc3d4416f5a7c79f"
+      },
+      "png": {
+        "path": "assets/symbols/lodging.png",
+        "bytes": 1494,
+        "sha256": "e1d8472947b3dc6ed20e5a7c466e0bd2715704b44cb852c013454ec405c52015"
+      }
+    },
+    {
+      "glyph": "marker",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/marker.svg",
+      "upstreamGitBlob": "2247dcde7d9ac9cc31c90a75d033e1ecb0c62334",
+      "svg": {
+        "path": "assets/symbols/marker.svg",
+        "bytes": 289,
+        "sha256": "5350899297309f6864c3c34f532c320d9e9ceafe5fbee48bf337d40fc9ac217c"
+      },
+      "png": {
+        "path": "assets/symbols/marker.png",
+        "bytes": 1627,
+        "sha256": "9af759bade0ae988448bd1330eb2d113b07d2322ce001dc7096ef0edb40aec8d"
+      }
+    },
+    {
+      "glyph": "mobile-phone",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/mobile-phone.svg",
+      "upstreamGitBlob": "b22778bd63436cd65db3ea7ac0c6c17a60d58c89",
+      "svg": {
+        "path": "assets/symbols/mobile-phone.svg",
+        "bytes": 444,
+        "sha256": "9b68ddd2a94bf93742bd0e6da364f926048b16ff3d7cf8a60f6dfd08d752912c"
+      },
+      "png": {
+        "path": "assets/symbols/mobile-phone.png",
+        "bytes": 1389,
+        "sha256": "cc68b9c8c9eb37223af881450f4211df0e184b30fa2f047dc6b0bd9bb01803e8"
+      }
+    },
+    {
+      "glyph": "mountain",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/mountain.svg",
+      "upstreamGitBlob": "d48d2449fb16bb81b97397f6431f8eab2cf16ee7",
+      "svg": {
+        "path": "assets/symbols/mountain.svg",
+        "bytes": 336,
+        "sha256": "9c5f0d06d07eea0c6b983c2f930a6148156acbd92ee4dd4f7f599d0b05b5035f"
+      },
+      "png": {
+        "path": "assets/symbols/mountain.png",
+        "bytes": 1680,
+        "sha256": "2e8020761efdff11f968434f018ff4ff8dd3ef275b4a606a4c5ff50b5d67c8ef"
+      }
+    },
+    {
+      "glyph": "museum",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/museum.svg",
+      "upstreamGitBlob": "1c1596d3bfd430398bb4c2151d9f36e85b5f5311",
+      "svg": {
+        "path": "assets/symbols/museum.svg",
+        "bytes": 308,
+        "sha256": "0faa66b24d534adc0767e614a838a746d6d178798368348bad49b699e11ad0e1"
+      },
+      "png": {
+        "path": "assets/symbols/museum.png",
+        "bytes": 1515,
+        "sha256": "f0f8f169f98824adb29e69ad820f50f0bb51cbd12038311efca26da8aac40123"
+      }
+    },
+    {
+      "glyph": "natural",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/natural.svg",
+      "upstreamGitBlob": "3b5778b80c294a221c0bec50aff0443497b1996b",
+      "svg": {
+        "path": "assets/symbols/natural.svg",
+        "bytes": 1037,
+        "sha256": "ebb2e3c82e5a85e2342561f4146512374b8bb2a81cb5ed27671dcbcee2f1d13a"
+      },
+      "png": {
+        "path": "assets/symbols/natural.png",
+        "bytes": 1747,
+        "sha256": "cc11b2e87b6c4eb446e640ccd12deaf8282a32b2639c3102849cfb203769d458"
+      }
+    },
+    {
+      "glyph": "park",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/park.svg",
+      "upstreamGitBlob": "10355295690cc3075f1d8ab8d6149ea6677f3c94",
+      "svg": {
+        "path": "assets/symbols/park.svg",
+        "bytes": 1248,
+        "sha256": "9f25e71f59ea90b3ffd974005cb94b704911526832dd157776e36f18ccc9085a"
+      },
+      "png": {
+        "path": "assets/symbols/park.png",
+        "bytes": 1723,
+        "sha256": "e6ebc7548c09c1f74fba2414e5524c368a83c01fdf0613cd1efdcb90dd358fce"
+      }
+    },
+    {
+      "glyph": "parking",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/parking.svg",
+      "upstreamGitBlob": "5a269d777f21901736f4a8be2dbb5218da8c06c5",
+      "svg": {
+        "path": "assets/symbols/parking.svg",
+        "bytes": 292,
+        "sha256": "278c990e7eec7b9d740da26b128825066c7c89536a26dc1fc03e30bc0d9af824"
+      },
+      "png": {
+        "path": "assets/symbols/parking.png",
+        "bytes": 1441,
+        "sha256": "bd31300a79c12ec568019386f697b30a896929460503f5041f8e29b309794de9"
+      }
+    },
+    {
+      "glyph": "pharmacy",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/pharmacy.svg",
+      "upstreamGitBlob": "c4de245ae85418bb93760674a3caca6f0acb8ead",
+      "svg": {
+        "path": "assets/symbols/pharmacy.svg",
+        "bytes": 510,
+        "sha256": "03297cf1af6d7af9af47cf1c54497fa373a488daf38909226de0b0b62c81b5e0"
+      },
+      "png": {
+        "path": "assets/symbols/pharmacy.png",
+        "bytes": 1559,
+        "sha256": "01c5ac60d7d2cad347806a03d04e265f661f8447c6ad10988e749b74e1f96160"
+      }
+    },
+    {
+      "glyph": "place-of-worship",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/place-of-worship.svg",
+      "upstreamGitBlob": "0ff8fd4d5fee9431ccb29e1851dbf006d1eb00a3",
+      "svg": {
+        "path": "assets/symbols/place-of-worship.svg",
+        "bytes": 421,
+        "sha256": "bd0b3efa5ec7169631383e8248c8e427d9393e5120f20eaa3db20dcf93249e9d"
+      },
+      "png": {
+        "path": "assets/symbols/place-of-worship.png",
+        "bytes": 1386,
+        "sha256": "65d38d2782d0ad3fe84141126232847d28a5d75385630791b7621b801abaeabf"
+      }
+    },
+    {
+      "glyph": "playground",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/playground.svg",
+      "upstreamGitBlob": "d2670ed9db8886b7e8f47ec293dddf93f50b7187",
+      "svg": {
+        "path": "assets/symbols/playground.svg",
+        "bytes": 1055,
+        "sha256": "7e161c0e9fe7fed13220beb4194ed77cddc8b498304b923ba805dd16527a9e4c"
+      },
+      "png": {
+        "path": "assets/symbols/playground.png",
+        "bytes": 1822,
+        "sha256": "5e39e0c672b7e4754dd430d0f057b846f4d33718f81bd5e9d2477199cdb6369a"
+      }
+    },
+    {
+      "glyph": "police",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/police.svg",
+      "upstreamGitBlob": "3c32c2acef129b9cb0ccd6ed7c0fb94dcd7d7bd0",
+      "svg": {
+        "path": "assets/symbols/police.svg",
+        "bytes": 578,
+        "sha256": "10695fe6943d35a67f04aa1872c324ec5df682bbbba0f49507282103f47e0bb2"
+      },
+      "png": {
+        "path": "assets/symbols/police.png",
+        "bytes": 1707,
+        "sha256": "633ca19cfd9eaa2deed6ad741e3ff09e3267d80d9047c8ffc472f401416cc179"
+      }
+    },
+    {
+      "glyph": "post",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/post.svg",
+      "upstreamGitBlob": "1c55253a09c477dc136e1472485d36c1a461eaca",
+      "svg": {
+        "path": "assets/symbols/post.svg",
+        "bytes": 559,
+        "sha256": "402ee34228d3653451fc04463ba73329039a97150f6d13088affc1bd0d918222"
+      },
+      "png": {
+        "path": "assets/symbols/post.png",
+        "bytes": 1487,
+        "sha256": "5f8ac87e48e0a0fa77a07d45735359e69aec61434c717f9d5996369b00d36c4e"
+      }
+    },
+    {
+      "glyph": "rail",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/rail.svg",
+      "upstreamGitBlob": "d79333d9ca5af2a1436ce3eb86b9f27a369eea3e",
+      "svg": {
+        "path": "assets/symbols/rail.svg",
+        "bytes": 1753,
+        "sha256": "b852ddf9670ae9d0b0d714f8ce535bb34c8372dfe51815d7c14f28aa0c1fed53"
+      },
+      "png": {
+        "path": "assets/symbols/rail.png",
+        "bytes": 1543,
+        "sha256": "cb4dd067289237c34c78b728ebd1d9724d1b16a8501bb39d3a06b42d502cd0d0"
+      }
+    },
+    {
+      "glyph": "recycling",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/recycling.svg",
+      "upstreamGitBlob": "23a77049c19e698311eb2f0a9038920d075a3474",
+      "svg": {
+        "path": "assets/symbols/recycling.svg",
+        "bytes": 1020,
+        "sha256": "7641dcf2c9f43d0e8b68e470e15723e7cfdaf66eef06f622d199e315a57ccdb5"
+      },
+      "png": {
+        "path": "assets/symbols/recycling.png",
+        "bytes": 1874,
+        "sha256": "b149759f20da996924d879718c61036fcabafae9066879e5fa343e8ed9c5b263"
+      }
+    },
+    {
+      "glyph": "religious-buddhist",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/religious-buddhist.svg",
+      "upstreamGitBlob": "c3e4b9a0dabd71a7b65382164f6d767567ff8111",
+      "svg": {
+        "path": "assets/symbols/religious-buddhist.svg",
+        "bytes": 2643,
+        "sha256": "2fe490e8643708246f9dcdc879c480deb06d119cd902aa3653c7c74da6e9b3d2"
+      },
+      "png": {
+        "path": "assets/symbols/religious-buddhist.png",
+        "bytes": 1869,
+        "sha256": "fe37ab6c26c433cf829cf0f01b5bb25b8477534013bc5b6352b9865950967cc4"
+      }
+    },
+    {
+      "glyph": "religious-christian",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/religious-christian.svg",
+      "upstreamGitBlob": "9f7bc2f7e1b9d38f610e3b3a928475c1a52a884f",
+      "svg": {
+        "path": "assets/symbols/religious-christian.svg",
+        "bytes": 290,
+        "sha256": "e2c9f58dd4d05d5387ea048722c0ae1f1037d280a8b254b4905e3d9c353c3f8d"
+      },
+      "png": {
+        "path": "assets/symbols/religious-christian.png",
+        "bytes": 1348,
+        "sha256": "c4eeb3627b32462b4f6a5499b458e1806df19e5152cb5150ddf7c3dae00c5739"
+      }
+    },
+    {
+      "glyph": "religious-jewish",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/religious-jewish.svg",
+      "upstreamGitBlob": "022c93e57d72361da00b931644b36809aed4e90c",
+      "svg": {
+        "path": "assets/symbols/religious-jewish.svg",
+        "bytes": 280,
+        "sha256": "33e833f99173c8af5f8032e6ae8b3f5bc5da778df46539f18aef04ea46682b27"
+      },
+      "png": {
+        "path": "assets/symbols/religious-jewish.png",
+        "bytes": 1510,
+        "sha256": "e4b455256b32ad7d90338c144f51821ce4322e0ba04930be9efd3b634f4256ce"
+      }
+    },
+    {
+      "glyph": "religious-muslim",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/religious-muslim.svg",
+      "upstreamGitBlob": "9da54b690807166ab2caf62f850f45d4adac1637",
+      "svg": {
+        "path": "assets/symbols/religious-muslim.svg",
+        "bytes": 645,
+        "sha256": "f5291f3925ff0601151b5215b2efe6233528724d97c45d5babe948094567e7e7"
+      },
+      "png": {
+        "path": "assets/symbols/religious-muslim.png",
+        "bytes": 1850,
+        "sha256": "3fed49a2ac2a3c0554bc7544231e6d0fb2837df8955e0847bb2bbaac67104e9a"
+      }
+    },
+    {
+      "glyph": "restaurant",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/restaurant.svg",
+      "upstreamGitBlob": "56882d03972086bc7a0cd717157d94299a139c3d",
+      "svg": {
+        "path": "assets/symbols/restaurant.svg",
+        "bytes": 555,
+        "sha256": "0a51307695a54f27c510e7703cb8f4d54a5f25baa48e0cef2fab0362e3de44a4"
+      },
+      "png": {
+        "path": "assets/symbols/restaurant.png",
+        "bytes": 1873,
+        "sha256": "d5ed9cc887019edffc8a5e9610ba237f7601164aa18f5c4508a22ea774ad23c5"
+      }
+    },
+    {
+      "glyph": "school",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/school.svg",
+      "upstreamGitBlob": "f54ef766ce2a9eff7b07d14ae7ca666d050886e0",
+      "svg": {
+        "path": "assets/symbols/school.svg",
+        "bytes": 735,
+        "sha256": "d6ac77a39471c0aed307926c7aad7f12a0039ffa01a053c1cdc87f35a4553bda"
+      },
+      "png": {
+        "path": "assets/symbols/school.png",
+        "bytes": 1902,
+        "sha256": "92f21e4dbd025c6fe3b281b39910d32b161679a664ffcf48b844497738ec4a9e"
+      }
+    },
+    {
+      "glyph": "shop",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/shop.svg",
+      "upstreamGitBlob": "df8e8dc31090c0618dda2ef0b86ab16da5c5e7ce",
+      "svg": {
+        "path": "assets/symbols/shop.svg",
+        "bytes": 696,
+        "sha256": "1e5b1aa8e2ddd4585d3f0d76f13782d9ab1d5cb3089fea42a1e76acc7aa3304b"
+      },
+      "png": {
+        "path": "assets/symbols/shop.png",
+        "bytes": 1669,
+        "sha256": "cf13f0fb12ff1643d2119e04d7d88b9552b07777e871886c6187937798917a7f"
+      }
+    },
+    {
+      "glyph": "stadium",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/stadium.svg",
+      "upstreamGitBlob": "cbcc6167d33e6f0267a4b2764de9f15c5f74ef1d",
+      "svg": {
+        "path": "assets/symbols/stadium.svg",
+        "bytes": 717,
+        "sha256": "3c23cc188ec00016ca179f6eba3701655dc8de500420cdfca9ea1844686f9311"
+      },
+      "png": {
+        "path": "assets/symbols/stadium.png",
+        "bytes": 1677,
+        "sha256": "a5aa4c96a827ce456a6abce8e980d635bc3ec29017a4b02871faefb7a7660cdd"
+      }
+    },
+    {
+      "glyph": "swimming",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/swimming.svg",
+      "upstreamGitBlob": "e78fb7a825fef39e113503fea3f54ac7a184b212",
+      "svg": {
+        "path": "assets/symbols/swimming.svg",
+        "bytes": 709,
+        "sha256": "27b16e1ae4375459c15a7dbd3126b6c7c27b13cc8938866439ee5b2141b88c67"
+      },
+      "png": {
+        "path": "assets/symbols/swimming.png",
+        "bytes": 1788,
+        "sha256": "b4d568c841a89d227e398d4c3f0b881bff8f6d85eeab186987c243880c3f4c4a"
+      }
+    },
+    {
+      "glyph": "taxi",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/taxi.svg",
+      "upstreamGitBlob": "7b5b2f45227640065243417751ca9434fc3fd6b5",
+      "svg": {
+        "path": "assets/symbols/taxi.svg",
+        "bytes": 1504,
+        "sha256": "e81163f28e187b99f448ea3ae4e6194ea3062b471fc0873c901099e1f39d1e4a"
+      },
+      "png": {
+        "path": "assets/symbols/taxi.png",
+        "bytes": 1571,
+        "sha256": "1040aada0c29d9bd7987d9df14314922db2145554e42148ba3ab00ac7a36de97"
+      }
+    },
+    {
+      "glyph": "theatre",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/theatre.svg",
+      "upstreamGitBlob": "87c9763246b743e04723ca9bf83f583af996f314",
+      "svg": {
+        "path": "assets/symbols/theatre.svg",
+        "bytes": 783,
+        "sha256": "e2e0e57eea2149e4675eb8e7a4b5c0f871360af48e87add5b7d8e9dddb1c974e"
+      },
+      "png": {
+        "path": "assets/symbols/theatre.png",
+        "bytes": 1761,
+        "sha256": "5fb7ee225ddbc24e1346b0f3e0d5b1fa1c3e7224fcdc425a8a75298146105870"
+      }
+    },
+    {
+      "glyph": "toilet",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/toilet.svg",
+      "upstreamGitBlob": "00821ff35106a5e7bb8b28979d7d15aabca04f83",
+      "svg": {
+        "path": "assets/symbols/toilet.svg",
+        "bytes": 589,
+        "sha256": "34bea90d322e10470ba3266083d0f0cb125f312b3a3217e2f71723ea54e7b54e"
+      },
+      "png": {
+        "path": "assets/symbols/toilet.png",
+        "bytes": 1657,
+        "sha256": "24d000da342f3df9e6c0faa8fbaecd4fb51b3542ecbab97cbbf423a0844c4309"
+      }
+    },
+    {
+      "glyph": "town-hall",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/town-hall.svg",
+      "upstreamGitBlob": "7825b1e0cc484e8c02730caaac16b6ab587661ce",
+      "svg": {
+        "path": "assets/symbols/town-hall.svg",
+        "bytes": 408,
+        "sha256": "bba4851b1cfc34644fbb70cc32d83da884d5a5050fefdb4b5671457c268f1fc3"
+      },
+      "png": {
+        "path": "assets/symbols/town-hall.png",
+        "bytes": 1467,
+        "sha256": "1d19dbc75949b811b46fc8f53ddbcf227545bb2a293f2762694c8df997299581"
+      }
+    },
+    {
+      "glyph": "warehouse",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/warehouse.svg",
+      "upstreamGitBlob": "165fce66f842524d35056e27dc8d73a9ded3c575",
+      "svg": {
+        "path": "assets/symbols/warehouse.svg",
+        "bytes": 488,
+        "sha256": "88f3229db8681f084136ba8848fb952559c6f9cd45c70c8161a0452c0ac06dc8"
+      },
+      "png": {
+        "path": "assets/symbols/warehouse.png",
+        "bytes": 1521,
+        "sha256": "61d62d4cdf597e55e29a5c98ed4f85fc6534acff5f1319ff3a03d9efaeab6252"
+      }
+    },
+    {
+      "glyph": "water",
+      "source": "https://raw.githubusercontent.com/mapbox/maki/28e2a3602e4bde033a1dd388e86e9c117b425e34/icons/water.svg",
+      "upstreamGitBlob": "8fca8934a513c23d4382d78e0ab33d839ae14908",
+      "svg": {
+        "path": "assets/symbols/water.svg",
+        "bytes": 291,
+        "sha256": "37110496414c4982c1027e59ea50c9fba026871bf179acdb744de2fea795109f"
+      },
+      "png": {
+        "path": "assets/symbols/water.png",
+        "bytes": 1606,
+        "sha256": "9bb80fe720b9add2acd63aa16cfd274cfe8bb8ebcd3f672398247315754a0ddb"
+      }
+    }
+  ]
+}
