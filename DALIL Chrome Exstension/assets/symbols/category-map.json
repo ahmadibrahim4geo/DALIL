@@ -22513,6 +22513,27 @@
       "license": "CC0-1.0"
     },
     {
+      "id": "google_places:town_square",
+      "kind": "category",
+      "googlePlaceType": "town_square",
+      "labels": {
+        "ar": null,
+        "en": "Town square"
+      },
+      "symbolId": "dalil.google-places-town-square",
+      "canonicalId": "google_places:town_square",
+      "glyph": "marker",
+      "assetKey": "dalil-google-places-town-square",
+      "svgPath": "assets/symbols/variants/dalil-google-places-town-square.svg",
+      "pngPath": "assets/symbols/variants/dalil-google-places-town-square.png",
+      "color": "#5e139a",
+      "foreground": "#ffffff",
+      "shape": "diamond",
+      "match": "family",
+      "resolutionOrigin": "canonical_id",
+      "license": "CC0-1.0"
+    },
+    {
       "id": "google_places:toy_store",
       "kind": "category",
       "googlePlaceType": "toy_store",

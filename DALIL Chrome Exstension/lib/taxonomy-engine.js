@@ -2762,12 +2762,27 @@ if (DALIL_REGISTRY_LIBRARY && DALIL_CATEGORY_REGISTRY) DALIL_REGISTRY_LIBRARY.us
 const DALIL_SEARCH_LANGUAGES = typeof SearchLanguages !== 'undefined'
   ? SearchLanguages
   : (typeof require === 'function' ? require('../core/search-languages.js') : null);
+const DALIL_QUICK_LIBRARY = typeof DalilQuickLibrary !== 'undefined'
+  ? DalilQuickLibrary
+  : (typeof require === 'function' ? require('../core/quick-library.js') : null);
+
+// UI-only supplemental branches do not change the 940 deterministic legacy leaves.
+const DALIL_PROVIDER_SECTORS = {
+  Automotive:'S14', Business:'S06', Culture:'S21', Education:'S08',
+  'Entertainment and Recreation':'S22', Facilities:'S31', Finance:'S12',
+  'Food and Drink':'S02', 'Geographical Areas':'S25', Government:'S10',
+  'Health and Wellness':'S09', Housing:'S05', Lodging:'S04',
+  'Natural Features':'S25', 'Places of Worship':'S01', Services:'S29',
+  Shopping:'S03', Sports:'S23', Transportation:'S13'
+};
 
 const TaxonomyEngine = {
   registry: DALIL_CATEGORY_REGISTRY,
 
   getLocalizedLeaf(leafOrName, locale = 'ar', branchId = null) {
     if (leafOrName?.kind === 'free_text') return leafOrName.text;
+    const quick = DALIL_QUICK_LIBRARY?.get(leafOrName);
+    if (quick) return quick.labels[String(locale).split('-')[0]] || quick.labels.en;
     if (this.registry) return this.registry.getLocalizedLeaf(branchId && typeof leafOrName === 'string' ? { name_ar: leafOrName, branchId } : leafOrName, locale);
     const leaf = typeof leafOrName === 'object' ? leafOrName : this.getLeafMeta(leafOrName);
     if (String(locale).startsWith('en')) return leaf?.name_en || 'Custom search term';
@@ -2831,6 +2846,11 @@ const TaxonomyEngine = {
   // available to terminology matching and explicit legacy comprehensive plans.
   getDisplayCategories(scope, leafNames = null) {
     const categories=this.registry?.getCategories()||[];
+    if (scope?.endsWith('.GP')) {
+      const sectorId=scope.slice(0,-3), allowed=leafNames?new Set(leafNames):null;
+      return categories.filter(c=>c.providerTable==='A'&&!c.legacyLeafIds.length&&
+        DALIL_PROVIDER_SECTORS[c.providerGroup]===sectorId&&(!allowed||allowed.has(c.canonicalId)));
+    }
     const branches=scope?.includes('.B')?[this.getBranch(scope)]:this.getSector(scope)?.branches||[];
     const ids=new Set(branches.filter(Boolean).map(b=>b.id));
     const allowed=leafNames?new Set(leafNames.map(name=>this.getLeafMeta(name)?.canonicalId).filter(Boolean)):null;
@@ -2839,6 +2859,7 @@ const TaxonomyEngine = {
 
   selectionId(value) {
     if (value?.kind === 'free_text') return DALIL_SEARCH_LANGUAGES?.createFreeText(value.text, value.locale || 'ar') || value;
+    if (DALIL_QUICK_LIBRARY?.get(value)) return value;
     const leaf=this.getLeafMeta(value);
     if(leaf?.descriptiveAttributes?.length)return value; // Explicit descriptive searches remain explicit.
     return this.getCategory(value)?.canonicalId||this.resolveConcept(value)?.canonicalId||value;
@@ -2846,6 +2867,59 @@ const TaxonomyEngine = {
 
   selectionKey(value) {
     return value?.kind === 'free_text' ? 'free_text:' + (DALIL_SEARCH_LANGUAGES?.normalizeLocale(value.locale || 'ar') || value.locale || 'ar') + ':' + value.text : String(this.selectionId(value));
+  },
+
+  getQuickCategories() { return DALIL_QUICK_LIBRARY?.list() || []; },
+  getQuickCategory(value) { return DALIL_QUICK_LIBRARY?.get(value) || null; },
+
+  resolveSearchHint(text, options = {}) {
+    const exact=this.resolveConcept(text,options);if(exact)return exact;
+    if(this.registry?.rankCandidates(text,{...options,fuzzy:false}).some(c=>c.requiresReview))return null;
+    const ids=DALIL_QUICK_LIBRARY?.findHintIds(text)||[];
+    return ids.length===1?this.getCategory(ids[0]):null;
+  },
+
+  getLibrarySectors(queryText = '') {
+    const query = this.registry?.normalize(queryText) || '';
+    const sectors = this.searchTaxonomy(queryText);
+    const byId = new Map(sectors.map(s=>[s.id,{...s,branches:[...s.branches]}]));
+    for (const sector of DALIL_SECTORS) {
+      const id=sector.id+'.GP';
+      const categories=this.getDisplayCategories(id).filter(c=>!query ||
+        [c.canonicalId,c.labels.ar,c.labels.en,...Object.values(c.aliases).flat()]
+          .some(label=>(this.registry?.normalize(label)||'').includes(query)) ||
+        (this.registry?.normalize(sector.name_ar)||'').includes(query) ||
+        (this.registry?.normalize(sector.name_en)||'').includes(query));
+      if (!categories.length) continue;
+      if (!byId.has(sector.id)) byId.set(sector.id,{...sector,branches:[]});
+      byId.get(sector.id).branches.push({id,name_ar:'أنشطة إضافية من Google',name_en:'Additional Google activities',
+        leaves:categories.map(c=>c.canonicalId)});
+    }
+    return [...byId.values()];
+  },
+
+  // Source type/category wins over the query that happened to discover a place.
+  getSourceCategory(item = {}) {
+    let source=String(item.sourceCategory || item.category || '').trim();
+    if(item.name&&source.length>item.name.length&&source.startsWith(item.name))source=source.slice(item.name.length).trim();
+    return source.replace(/\d+(?:[.,]\d+)?\s*\([\d,\.٬،\s]+\)/g,'').replace(/★\s*\d+(?:[.,]\d+)?/g,'').replace(/^[\s·•]+|[\s·•]+$/g,'').trim();
+  },
+
+  resolveResultConcept(item = {}) {
+    const type=this.getCategory('google_places:'+item.googlePlaceType);
+    if (type) return type;
+    const source=this.getSourceCategory(item);
+    if (source) return this.resolveConcept(source);
+    return this.getCategory(item.canonicalId || item.categoryId || (item.categoryIds||[])[0]);
+  },
+
+  getResultSector(item = {}) {
+    const concept=this.resolveResultConcept(item);
+    const mapped=this.getSector(concept?.groupId || DALIL_PROVIDER_SECTORS[concept?.providerGroup]);
+    if(mapped)return mapped;
+    const source=this.getSourceCategory(item);
+    const style=source?this.resolveCategoryStyle(source):null;
+    return style?.sectorId&&style.sectorId!=='S31'?this.getSector(style.sectorId):null;
   },
 
   searchTaxonomy(queryText) {
@@ -3256,7 +3330,7 @@ const TaxonomyEngine = {
       let id = 'custom_' + hash(signature), suffix = 1;
       while (freeIds.has(id) && freeIds.get(id) !== signature) id = 'custom_' + hash(signature) + '_' + (++suffix);
       freeIds.set(id, signature);
-      const concept = this.resolveConcept(value.text, { country: options.country, locale: value.locale });
+      const concept = this.resolveSearchHint(value.text, { country: options.country, locale: value.locale });
       add({ ...value, id, originalText: value.text, isCustom: true, labels: {},
         canonicalId: concept?.canonicalId || null, googlePlaceType: concept?.googlePlaceType || null,
         symbolId: concept?.symbolId || null, branchId: concept?.parentId || null, sectorId: concept?.groupId || null });
@@ -3267,6 +3341,8 @@ const TaxonomyEngine = {
       const original = typeof input === 'string' ? input : '';
       const clean = String(typeof input === 'object' ? input?.id || input?.canonicalId || input?.name_ar || '' : input || '').trim();
       if (!clean) continue;
+      const quick=DALIL_QUICK_LIBRARY?.get(clean);
+      if (quick) { add({...quick,branchId:quick.id,name_ar:quick.labels.ar,name_en:quick.labels.en}); continue; }
       let sector = DALIL_SECTORS.find(s => [s.id, s.name_ar, s.name_en].includes(clean));
       if (!sector && clean.includes('مساجد') && clean.includes('دور عبادة')) sector = this.getSector('S01');
       if (sector) { this.getAllLeavesWithMeta(sector.id).forEach(add); continue; }
@@ -3345,8 +3421,10 @@ const TaxonomyEngine = {
           if (!coverage.requestedLocales.includes(locale)) coverage.requestedLocales.push(locale);
         }
         const selection = leaf.kind === 'free_text' ? { ...leaf, locale } : leaf;
-        const resolution = languages.resolveTerms(selection, { locale, category,
-          queryTerms: options.queryTerms, fallbackLanguage });
+        const termOptions = { locale, category, queryTerms: options.queryTerms, fallbackLanguage };
+        const resolution = leaf.kind === 'quick_category'
+          ? DALIL_QUICK_LIBRARY.resolveTerms(selection, termOptions, languages)
+          : languages.resolveTerms(selection, termOptions);
         if (resolution.missingTranslation) for (const represented of representedLeaves) missingTranslations.push({
           ...resolution.missingTranslation, selectionId: represented.id, canonicalId: represented.canonicalId || null,
           representedBy: kind === 'representative' ? leaf.id : null
@@ -3358,6 +3436,7 @@ const TaxonomyEngine = {
     else {
       const groups = new Map();
       for (const leaf of expanded) {
+        if (leaf.kind==='quick_category'||leaf.kind==='free_text') { scheduleLeaf(leaf); continue; }
         const key = leaf.branchId || leaf.id;
         if (!groups.has(key)) groups.set(key, []); groups.get(key).push(leaf);
       }

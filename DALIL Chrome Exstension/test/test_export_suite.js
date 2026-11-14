@@ -146,7 +146,7 @@ assert.strictEqual(mosqueSubCat, "المساجد والمصليات", "Must reso
 const formattedRows = ExportUtils.formatDataForExport([
   { name: "مسجد حسن عبد الله", category: "مسجد حسن عبد الله 5.0 (1) مسجد", searchKeyword: "مسجد", x: 31.27, y: 29.84 }
 ]);
-assert.strictEqual(formattedRows[0]["التصنيف الفرعي"], "المساجد والمصليات", "Table/export row must contain clean sub-category");
+assert.strictEqual(formattedRows[0]["التصنيف الفرعي"], "مسجد", "Table/export uses the cleaned observed type; legacy branch lookup remains available");
 console.log("✅ [PASS] Clean Sub-Category resolution resolves to branch names accurately");
 
 console.log("\n-----------------------------------------");

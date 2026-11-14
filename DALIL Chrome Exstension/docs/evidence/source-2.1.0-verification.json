@@ -1,0 +1,61 @@
+{
+  "schema": "dalil.source-verification/1",
+  "version": "2.1.0",
+  "date": "2026-11-14",
+  "scope": "Source preparation and documentation; remote upload is verified separately after push.",
+  "checks": [
+    {
+      "command": "npm.cmd test",
+      "result": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "node test/test_comprehensive_audit.js",
+      "result": "30/30 passed",
+      "exit_code": 0
+    },
+    {
+      "command": "node tools/project-hygiene.js",
+      "result": "0 duplicate groups; dry run",
+      "exit_code": 0
+    },
+    {
+      "check": "README, changelog and R6 relative links",
+      "result": "41 local targets exist"
+    },
+    {
+      "check": "Manifest and package versions",
+      "result": "Both 2.1.0"
+    },
+    {
+      "check": "Native R6 browser evidence freshness",
+      "result": "14 original source/test hashes unchanged; package version updated; manifest only changes version",
+      "references": [
+        "quick-library-r6-browser.json",
+        "quick-library-r6-languages.json"
+      ]
+    }
+  ],
+  "source_hashes": {
+    "core/quick-library.js": "d1476fce8b8ea76b1df727ca2ec9a87374203670f7210a93405ae9d5e58ff8f0",
+    "core/category-registry.js": "eb175a4ccbf24dae33d412e9aeb3b861b0610e6095f400e51fd516b9ffc7adfd",
+    "core/i18n.js": "313699895d928c46b7f151a331ca39f8c1aec04f9334b9a708c5ecd5c82f4c0a",
+    "core/symbology.js": "44f7e0815bd8d36322a63b64e5009b0cc7aa8d68db6987aa5e1285f2c0db53b9",
+    "lib/taxonomy-engine.js": "c15bfd4a9a7ce0a8eb0e41025a0a9f4a2186a3a4ea35bde03e5f82d5f668899c",
+    "lib/export-utils.js": "6a97eff748dfcb88efd0ebbf0e93866e7bca70582107fd8fcc7343fc925fba75",
+    "background/background.js": "9d03b83361b4a1ae451d6b298111dc335bbed6ad28f3d9b88464b8759c04b3a0",
+    "dashboard/dashboard.js": "42529a2ed7a46f300a7796b6ac8a7e36cc5ba69f467c51db437dc1f8d77227e5",
+    "dashboard/dashboard.html": "19b8a1de9f395d23c05903c40d9c29a1c90cd1930e3f2469f0c89c235609e2c6",
+    "dashboard/dashboard.css": "c96b8c591334a5584ab22ce28176d28d09fc6893104c55deab2e8c9b7fe00561",
+    "core/export-worker.js": "04efc588f6d673578435f2736422d1b870b4de52e44f42ac10e5a939a1b95dde",
+    "package.json": "3ecad7214b1290bbe1b785e2a858fa7e94da8ce3b1cd99e0fbc67467a3fbcfb2",
+    "test/test_quick_library.js": "e792a5cfc71bc1740b4f756109d2668fdb91e1c726f6e5a838dea511113cd050",
+    "test/test_quick_library_browser.js": "a55e12c7cedcc9c5b9603f74115c58ef125d8afbd2c8e8619b903f12b9403d9e",
+    "test/test_search_languages_browser.js": "5d15605795536d2b73dc70fe6d1ccaa8ac8e12f2812e84ad81fe9cd996c03ae0",
+    "manifest.json": "1aa20a475dc6659050ee8c0d63bec952acd5fe7b310a1fe41a5136de2f139138"
+  },
+  "limitations": [
+    "Native browser reports use controlled source documents, not live Google completeness.",
+    "No Chrome Web Store publication or GitHub Release creation is included."
+  ]
+}

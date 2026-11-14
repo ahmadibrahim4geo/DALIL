@@ -48,12 +48,12 @@
     const item=typeof value==='string'?{categoryId:value,category:value}:(value||{});
     const taxonomy=engine(),categoryId=item.canonicalId||item.categoryId||(item.categoryIds||[])[0]||'';
     const scope=/^S\d{2}(?:\.B\d{2})?$/.test(categoryId)?categoryId:null;
-    const sourceTerm=item.sourceCategory||item.category||'';
+    const sourceTerm=taxonomy?.getSourceCategory?.(item)||item.sourceCategory||item.category||'';
     const explicitType=taxonomy?.getCategory?.('google_places:'+item.googlePlaceType);
-    let concept=explicitType||taxonomy?.getCategory?.(categoryId)||taxonomy?.resolveConcept?.(categoryId)||null;
-    let origin=explicitType?'google_place_type':concept?'canonical_id':null;
+    let concept=explicitType||(sourceTerm?taxonomy?.resolveConcept?.(sourceTerm):taxonomy?.getCategory?.(categoryId)||taxonomy?.resolveConcept?.(categoryId))||null;
+    let origin=explicitType?'google_place_type':concept?(sourceTerm&&sourceTerm!==categoryId?'source_category':'canonical_id'):null;
     if(!concept&&sourceTerm){concept=taxonomy?.resolveConcept?.(sourceTerm)||null;if(concept)origin='source_category';}
-    if(!concept&&!scope){concept=taxonomy?.getCategory?.(item.queryCategoryId)||taxonomy?.resolveConcept?.(item.searchKeyword||'')||null;if(concept)origin='query_hint';}
+    if(!concept&&!scope&&!sourceTerm){concept=taxonomy?.getCategory?.(item.queryCategoryId)||taxonomy?.resolveConcept?.(item.searchKeyword||'')||null;if(concept)origin='query_hint';}
     if(scope?.includes('.B')){concept=taxonomy?.getDisplayCategories?.(scope)?.[0]||null;origin='branch';}
     const term=concept?.labels.en||sourceTerm||item.searchKeyword||'';
     const style=taxonomy?.resolveCategoryStyle?.(scope?.split('.')[0]||term)||{};
@@ -63,7 +63,7 @@
     const key=canonicalId+'|'+officialType+'|'+family+'|'+origin;
     if(cache.has(key))return cache.get(key);
     const legacyGlyph=legacyIcons[style.icon]==='marker'?null:legacyIcons[style.icon];
-    const glyph=scope&&!scope.includes('.B')?(families[family]||'marker'):(types[officialType]||conceptGlyphs[canonicalId]||legacyGlyph||families[concept?.groupId]||providerFamilies[concept?.providerGroup]||families[family]||'marker');
+    const glyph=!concept&&!scope?'marker':scope&&!scope.includes('.B')?(families[family]||'marker'):(types[officialType]||conceptGlyphs[canonicalId]||legacyGlyph||families[concept?.groupId]||providerFamilies[concept?.providerGroup]||families[family]||'marker');
     const symbolId=scope?'dalil.scope-'+scope.toLowerCase().replaceAll('.','-'):concept?.symbolId||'dalil.unclassified';
     initializeStyles();const visual=visualStyles.get(symbolId)||visualStyles.get('dalil.unclassified');
     const assetKey=symbolId.replace(/[^a-z0-9-]/g,'-');

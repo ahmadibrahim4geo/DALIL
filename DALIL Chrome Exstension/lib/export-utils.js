@@ -361,12 +361,23 @@ const ExportUtils = {
   },
 
   categoryLabel(item, kind, options) {
-    const key = JSON.stringify([this.exportLanguage(options), kind, item.canonicalId || item.categoryId || (item.categoryIds || [])[0], item.categoryMain, item.sector, item.subCategory, item.branch, item.searchKeyword || item.category || item.name]);
+    const key = JSON.stringify([this.exportLanguage(options), kind, item.canonicalId || item.categoryId || (item.categoryIds || [])[0], item.googlePlaceType, item.sourceCategory, item.category, item.categoryMain, item.sector, item.subCategory, item.branch, item.searchKeyword, item.name]);
     if (this.categoryLabelCache.has(key)) return this.categoryLabelCache.get(key);
-    const raw = kind === 'main' ? this.resolveMainCategory(item) : this.resolveSubCategory(item);
     const remember = value => { if (this.categoryLabelCache.size > 4096) this.categoryLabelCache.clear(); this.categoryLabelCache.set(key, value); return value; };
-    if (this.exportLanguage(options) === 'ar') return remember(raw);
     const engine = typeof TaxonomyEngine !== 'undefined' ? TaxonomyEngine : TaxonomyEngineRef;
+    const source=engine?.getSourceCategory?.(item)||String(item.sourceCategory || item.category || '').trim();
+    const observed=engine?.resolveResultConcept?.(item);
+    if(kind==='sub') {
+      // The observed provider label remains unchanged, including its language.
+      if(source)return remember(source);
+      if(observed)return remember(observed.labels[this.exportLanguage(options)]||observed.labels.en);
+      return remember(item.subCategory||this.messages(options).general);
+    }
+    const observedSector=engine?.getResultSector?.(item);
+    if(observedSector)return remember(this.exportLanguage(options)==='en'?observedSector.name_en:observedSector.name_ar);
+    if(source&&!observed)return remember(this.messages(options).general);
+    const raw = this.resolveMainCategory(item);
+    if (this.exportLanguage(options) === 'ar') return remember(raw);
     const categoryId = item.canonicalId || item.categoryId || (item.categoryIds || [])[0];
     const concept = categoryId && engine?.getCategory ? engine.getCategory(categoryId) : null;
     const groupId = concept?.groupId;

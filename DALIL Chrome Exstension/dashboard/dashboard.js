@@ -405,7 +405,12 @@ document.addEventListener("DOMContentLoaded", () => {
   function t(key) { return (I18N_DICT[currentLang] || I18N_DICT.ar)[key] || key; }
   function localizeCategory(value, branchId) { if(value?.kind==="free_text")return value.text;return typeof TaxonomyEngine !== "undefined" && TaxonomyEngine.getLocalizedLeaf ? TaxonomyEngine.getLocalizedLeaf(value, currentLang, branchId) : value; }
   function targetKey(value){return TaxonomyEngine.selectionKey?TaxonomyEngine.selectionKey(value):String(value);}
-  function symbolInput(value){return value?.kind==="free_text"?{category:value.text,searchKeyword:value.text}:typeof value==="string"?{categoryId:value,category:value}:value;}
+  function symbolInput(value){
+    const quick=TaxonomyEngine.getQuickCategory?.(value);
+    if(quick)return quick.canonicalId?{categoryId:quick.canonicalId}:{category:quick.terms.en[0]};
+    if(value?.kind==="free_text")return {searchKeyword:value.text,queryCategoryId:TaxonomyEngine.resolveSearchHint?.(value.text)?.canonicalId};
+    return typeof value==="string"?{categoryId:value,category:value}:value;
+  }
   function getSearchLocale(){const input=document.getElementById("searchLocale");return SearchLanguages.normalizeLocale(input?.value==="__custom__"?document.getElementById("customSearchLocale")?.value:input?.value||"ar");}
   function buildUiQueryPlan(targets=targetPhenomena){const locale=getSearchLocale();return TaxonomyEngine.buildQueryPlan({selectedLeaves:targets,searchLanguage:locale,uiLanguage:currentLang,provider:document.getElementById("dataSource")?.value||"google_maps_dom",mode:selectQueryPlanMode?.value||"comprehensive",bilingualEnabled:['ar','en'].includes(SearchLanguages.localeInfo(locale).language)&&!!sideBilingualToggle?.checked,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?'en':null});}
   function renderSearchLanguageChoices(locale=null){
@@ -440,7 +445,7 @@ document.addEventListener("DOMContentLoaded", () => {
       panel.classList.toggle('hidden',!unique.size);list.innerHTML='';
       for(const missing of [...unique.values()].slice(0,40)){
         const id=missing.selectionId||missing.canonicalId,label=document.createElement('label');label.className='query-term-row';
-        const text=document.createElement('span');text.textContent=localizeCategory(missing.canonicalId||id)+' · '+missing.locale;
+        const text=document.createElement('span');text.textContent=localizeCategory(TaxonomyEngine.getQuickCategory?.(id)?id:missing.canonicalId||id)+' · '+missing.locale;
         const input=document.createElement('input');input.type='text';input.className='input query-term-override';input.dir='auto';input.maxLength=1000;input.dataset.selectionId=id;input.dataset.locale=missing.locale;input.setAttribute('aria-label',text.textContent);label.appendChild(text);label.appendChild(input);list.appendChild(label);
       }
       if(unique.size>40){const text=document.createElement('p');text.textContent=t('translationBatchHint');list.appendChild(text);}
@@ -958,6 +963,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ربط النقر على المقترحات السريعة
     const suggestedPhenomChips = document.getElementById("suggestedPhenomChips");
+    document.getElementById("btnQuickLibraryMore")?.addEventListener("click", () => {
+      const expanded=suggestedPhenomChips.classList.toggle("is-expanded");
+      const button=document.getElementById("btnQuickLibraryMore");button.setAttribute("aria-expanded",String(expanded));
+      button.textContent=t(expanded?"quickShowLess":"quickShowMore");
+    });
     if (suggestedPhenomChips) {
       suggestedPhenomChips.addEventListener("click", (e) => {
         const chip = e.target.closest(".suggest-chip");
@@ -1152,9 +1162,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnQuickAddPhenom = document.getElementById("btnQuickAddPhenom");
     if (btnQuickAddPhenom && inputQuickPhenom) {
       const addQuick = () => {
-        const val = inputQuickPhenom.value.trim();
-        if (val) {
-          addPhenomenon(val);
+        const val = inputQuickPhenom.value;
+        if (val.trim()) {
+          try{addPhenomenon(SearchLanguages.createFreeText(val,getSearchLocale()));}catch(error){alert(t(error.code||'INVALID_QUERY_TERM'));return;}
           inputQuickPhenom.value = "";
         }
       };
@@ -1203,7 +1213,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnTaxSelectAllVisible.addEventListener("click", (e) => {
         e.stopPropagation();
         if (typeof TaxonomyEngine !== "undefined") {
-          const matchedSectors = TaxonomyEngine.searchTaxonomy(taxFilterText, currentLang);
+          const matchedSectors = TaxonomyEngine.getLibrarySectors(taxFilterText);
           matchedSectors.forEach(sec => {
             sec.branches.forEach(br => {
               TaxonomyEngine.getDisplayCategories(br.id,taxFilterText?br.leaves:null).forEach(c => {
@@ -1250,7 +1260,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const sectors = TaxonomyEngine.searchTaxonomy(taxFilterText, currentLang);
+    const sectors = TaxonomyEngine.getLibrarySectors(taxFilterText);
     taxonomyTreeList.innerHTML = "";
 
     if (sectors.length === 0) {
@@ -1263,7 +1273,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     sectors.forEach((sec) => {
-      const allLeafLabels = TaxonomyEngine.getDisplayCategories(sec.id).map(c=>c.canonicalId);
+      const allLeafLabels = sec.branches.flatMap(br=>TaxonomyEngine.getDisplayCategories(br.id).map(c=>c.canonicalId));
       const isSectorFullySelected = allLeafLabels.length > 0 && allLeafLabels.every((l) => targetPhenomena.includes(l));
 
       const card = document.createElement("div");
@@ -1309,7 +1319,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const leaf=category.canonicalId,isSelected=targetPhenomena.includes(leaf);
                         const variants=category.searchTerms||[],aliases=variants.filter(v=>v.kind==="local_alias").map(v=>v.labels[currentLang]),descriptors=variants.filter(v=>v.kind==="descriptive_variant").map(v=>v.labels[currentLang]);
                         const title=[aliases.length?t("categoryAliases")+": "+aliases.join(", "):"",descriptors.length?t("categoryDescriptors")+": "+descriptors.join(", "):""].filter(Boolean).join(" · ");
-                        return '<button type="button" class="tax-leaf-btn '+(isSelected?'selected':'')+'" data-leaf="'+escapeAttr(leaf)+'" title="'+escapeAttr(title)+'">'+categorySymbolHtml(leaf,"tax-symbol")+'<span class="tax-leaf-text"><span>'+escapeHtml(category.labels[currentLang]||localizeCategory(leaf))+'</span><small class="tax-concept-meta">'+escapeHtml(t(category.googlePlaceType?"googleTypeLabel":"dalilConceptLabel"))+'</small></span><span>'+(isSelected?"✓":"+")+'</span></button>';
+                        return '<button type="button" class="tax-leaf-btn '+(isSelected?'selected':'')+'" data-leaf="'+escapeAttr(leaf)+'" title="'+escapeAttr(title)+'">'+categorySymbolHtml(leaf,"tax-symbol")+'<span class="tax-leaf-text"><span>'+escapeHtml(category.labels[currentLang]||category.labels.en||leaf)+'</span><small class="tax-concept-meta">'+escapeHtml(t(category.googlePlaceType?"googleTypeLabel":"dalilConceptLabel"))+'</small></span><span>'+(isSelected?"✓":"+")+'</span></button>';
                       })
                       .join("")}
                   </div>
@@ -1382,7 +1392,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function addPhenomenonFromInput() {
     const val = inputNewPhenomenon.value;
     if (!val.trim()) return;
-    try{addPhenomenon(SearchLanguages.createFreeText(val,getSearchLocale()));}catch(error){alert(t('INVALID_LOCALE'));return;}
+    try{addPhenomenon(SearchLanguages.createFreeText(val,getSearchLocale()));}catch(error){alert(t(error.code||'INVALID_QUERY_TERM'));return;}
     inputNewPhenomenon.value = "";
     inputNewPhenomenon.focus();
   }
@@ -1412,7 +1422,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function queriesForTarget(target){
     let locale;try{locale=typeof SearchLanguages!=="undefined"?getSearchLocale():'ar';}catch(_){return [];}
     const bilingual=!!sideBilingualToggle?.checked;
-    const key=targetKey(target)+'|'+locale+'|'+bilingual+'|'+JSON.stringify(queryTermOverrides)+'|'+!!document.getElementById('allowEnglishSearchFallback')?.checked;
+    const key=targetKey(target)+'|'+locale+'|'+bilingual+'|'+selectQueryPlanMode?.value+'|'+JSON.stringify(queryTermOverrides)+'|'+!!document.getElementById('allowEnglishSearchFallback')?.checked;
     if(targetPlanCache.has(key))return targetPlanCache.get(key);
     let queries=[target];
     try{queries=buildUiQueryPlan([target]).queriesToRun||queries;}catch(_){}
@@ -1455,7 +1465,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function renderQuickLibrary() {
+    const container=document.getElementById("suggestedPhenomChips");if(!container)return;
+    container.innerHTML=TaxonomyEngine.getQuickCategories().map(p=>{
+      const selected=targetPhenomena.includes(p.id);
+      return '<button type="button" class="suggest-chip'+(selected?' selected':'')+'" data-phenom="'+escapeAttr(p.id)+'" aria-pressed="'+selected+'">'+categorySymbolHtml(p.id)+'<span>'+escapeHtml(p.labels[currentLang]||p.labels.en)+'</span></button>';
+    }).join('');
+    const button=document.getElementById("btnQuickLibraryMore");
+    if(button)button.textContent=t(container.classList.contains("is-expanded")?"quickShowLess":"quickShowMore");
+  }
+
   function renderPhenomenaChips() {
+    renderQuickLibrary();
     activePhenomenaContainer.innerHTML = "";
     activePhenomenaCount.textContent = targetPhenomena.length;
     if (navPhenomCount) navPhenomCount.textContent = targetPhenomena.length;
@@ -2366,11 +2387,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const discoveryNotice=document.getElementById("mapDiscoveryNotice");if(discoveryNotice)discoveryNotice.textContent=early?String(early)+' '+t(showEarly?"earlyDiscoveriesShown":"earlyDiscoveriesHidden"):"";
     renderSymbolLegend(rendered);
   }
-  function renderSymbolLegend(places=[]){
+  function renderSymbolLegend(places=(allResults||[]).filter(hasGeometry)){
     const legend=document.getElementById("mapSymbolLegend");if(!legend||typeof DalilSymbology==="undefined")return;
     const entries=new Map();
-    for(const item of (places.length?places:targetPhenomena)){const symbol=DalilSymbology.resolve(symbolInput(item));if(!entries.has(symbol.symbolId))entries.set(symbol.symbolId,{symbol,label:typeof item==="string"||item?.kind==="free_text"?localizeCategory(item):resultCategory(item,"sub")});}
-    legend.innerHTML=[...entries.values()].slice(0,5).map(({symbol,label})=>'<span role="listitem"><img src="'+safeAssetUrl(symbol.pngPath)+'" width="22" height="22" alt=""><span>'+escapeHtml(label)+'</span></span>').join("");
+    for(const item of places){const symbol=DalilSymbology.resolve(item);if(!entries.has(symbol.symbolId))entries.set(symbol.symbolId,{symbol,label:resultCategory(item,"sub")});}
+    legend.innerHTML=[...entries.values()].map(({symbol,label})=>'<span role="listitem"><img src="'+safeAssetUrl(symbol.pngPath)+'" width="22" height="22" alt=""><span>'+escapeHtml(label)+'</span></span>').join("");
   }
   function safeAssetUrl(path){const value=String(path||"");return /^[.\w/-]+\.(svg|png)$/i.test(value)?escapeAttr(value.startsWith("../")?value:"../"+value):"";}
   function renderPhenomenaTabs(){

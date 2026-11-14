@@ -2,8 +2,8 @@
   "schema": "dalil.symbol-variants/1",
   "renderer": "sharp 0.35.5",
   "baseLibrary": "Maki 8.2.0 (CC0-1.0)",
-  "icons": 1254,
-  "uniquePngHashes": 1254,
+  "icons": 1255,
+  "uniquePngHashes": 1255,
   "resources": [
     {
       "symbolId": "dalil.dalil-drug-warehouse",
@@ -9652,6 +9652,15 @@
       "svg": "assets/symbols/variants/dalil-google-places-tourist-information-center.svg",
       "png": "assets/symbols/variants/dalil-google-places-tourist-information-center.png",
       "sha256": "e5f9541885cb5798ffaafa2ae035c8a5be0943c19420261f01670ccdc6fd0f4c"
+    },
+    {
+      "symbolId": "dalil.google-places-town-square",
+      "glyph": "marker",
+      "color": "#5e139a",
+      "shape": "diamond",
+      "svg": "assets/symbols/variants/dalil-google-places-town-square.svg",
+      "png": "assets/symbols/variants/dalil-google-places-town-square.png",
+      "sha256": "c1cefc5bffc03c06801fa9ac3960df97ee08cabc2efec89015969fe974dfcced"
     },
     {
       "symbolId": "dalil.google-places-toy-store",

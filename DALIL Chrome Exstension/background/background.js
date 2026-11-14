@@ -6,6 +6,7 @@
 
 // استيراد محرك التصنيفات والقاموس والشبكات الجغرافية ودوال الفحص والتحليل المكاني
 try {
+  importScripts("../core/quick-library.js");
   importScripts("../core/category-registry.js", "../core/search-languages.js", "../lib/taxonomy-engine.js", "../lib/smart-brands.js", "../core/symbology.js", "../lib/export-utils.js", "../lib/spatial-utils.js", "../core/workspace-state.js", "../core/records.js", "../core/source-adapters.js", "../core/search-navigation.js", "grid-presets.js");
 } catch (e) {
   console.warn("importScripts fallback:", e);
@@ -640,7 +641,7 @@ function prepareQueriesList(config) {
  * بناء رابط البحث على خرائط جوجل لمركز المربع
  */
 function buildMapsSearchUrl(query, cell, zoom, locale = 'ar', identity = null) {
-  const encodedQuery = encodeURIComponent(query.trim());
+  const encodedQuery = encodeURIComponent(query);
   const lang=SearchLanguages.normalizeLocale(locale);
   const url=new URL(`https://www.google.com/maps/search/${encodedQuery}/@${cell.centerLat},${cell.centerLng},${zoom}z`);
   url.searchParams.set('hl',lang);
@@ -812,10 +813,15 @@ async function processQueueStep() {
       item.discoveries=[{...identity,query:qText,queryLocale:taskLocale,observedAt:item.lastUpdated,insideCurrentCell:ownerCell?.id===cell.id}];
       if(typeof TaxonomyEngine!=='undefined' && typeof TaxonomyEngine.classifyPlaceCategory==='function'){
         const match=TaxonomyEngine.classifyPlaceCategory(item,qText);
-        item.sourceCategory=item.category || match.sourceCategory;
+        item.sourceCategory=item.category || '';
         item.normalizedCategory=match.normalizedCategory;
         item.categoryConfidence=match.categoryConfidence;
         item.sectorId=match.sectorId;
+        const sourceConcept=TaxonomyEngine.resolveResultConcept(item);
+        if(sourceConcept){
+          item.canonicalId=sourceConcept.canonicalId;item.categoryIds=[sourceConcept.canonicalId];
+          item.symbolId=sourceConcept.symbolId;
+        }
         const concept=canonicalIds.length===1?TaxonomyEngine.getCategory(canonicalIds[0]):typeof TaxonomyEngine.resolveConcept==='function' ? TaxonomyEngine.resolveConcept(qText) : null;
         const tagged=concept?.osmTags?.length && item.osmTags && concept.osmTags.every(tag=>item.osmTags[tag.key]===tag.value);
         item.queryCategoryId=concept?.canonicalId || null;

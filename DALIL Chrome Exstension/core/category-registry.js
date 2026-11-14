@@ -1,7 +1,7 @@
 /**
  * DALIL Category Registry. Legacy discovery terms, official provider type IDs,
  * aliases and descriptive attributes are separate concepts.
- * Type identifiers: Google Developers Place Types (New), retrieved 2026-11-13,
+ * Type identifiers: Google Developers Place Types (New), rechecked 2026-11-14,
  * page updated 2026-11-09. CC BY 4.0 documentation; identifiers are API facts.
  * https://developers.google.com/maps/documentation/places/web-service/place-types
  * No Business Profile GCIDs or country availability are inferred.
@@ -15,7 +15,7 @@
 
   const GOOGLE_TYPES_SNAPSHOT = {
   "version": "2026-11-09",
-  "retrieved": "2026-11-13",
+  "retrieved": "2026-11-14",
   "source": "https://developers.google.com/maps/documentation/places/web-service/place-types",
   "license": "CC-BY-4.0",
   "tableA": [
@@ -1937,6 +1937,10 @@
   ],
   "tableB": [
     {
+      "id": "town_square",
+      "group": "Additional types"
+    },
+    {
       "id": "administrative_area_level_3",
       "group": "Additional types"
     },
@@ -2724,7 +2728,7 @@
       getLocalizedLeaf(value, locale = 'ar') {
         const language = String(locale).split('-')[0]; const leaf = getLeaf(value);
         if (leaf) return leaf.labels[language] || (language === 'ar' ? leaf.name_ar : leaf.name_en);
-        const concept = resolveConcept(value); if (concept?.labels[language]) return concept.labels[language];
+        const concept = resolveConcept(value); if (concept) return concept.labels[language] || concept.labels.en;
         const raw = String(typeof value === 'object' ? value?.name_ar || '' : value || '');
         return language === 'en' && /[\u0600-\u06ff]/.test(raw) ? 'Custom search term' : raw;
       }

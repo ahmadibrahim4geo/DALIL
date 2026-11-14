@@ -1138,7 +1138,9 @@ p {
 }
 
 .map-legend{flex-wrap:wrap;max-width:calc(100% - 24px);gap:7px 10px}
-.map-symbol-legend{position:absolute;bottom:48px;left:12px;z-index:700;display:flex;flex-wrap:wrap;gap:6px 12px;max-width:calc(100% - 24px);padding:5px 8px;border-radius:8px;background:var(--paper);box-shadow:0 2px 12px #0002;pointer-events:none;font-size:11px}
+.map-symbol-legend{display:flex;flex-wrap:wrap;gap:6px 12px;padding:8px;font-size:11px;max-height:160px;overflow:auto}
+.result-symbols-panel{padding:6px 12px;border-top:1px solid var(--line);font-size:12px}
+.result-symbols-panel summary{cursor:pointer}
 .map-symbol-legend:empty{display:none}
 .map-symbol-legend>span{display:flex;align-items:center;gap:4px}
 .map-foot{flex-wrap:wrap;gap:5px 12px}
@@ -3120,6 +3122,8 @@ input[type="checkbox"]:focus-visible {
   flex-wrap: wrap;
   gap: 6px;
 }
+.quick-library-chips:not(.is-expanded) .suggest-chip:nth-child(n+13){display:none}
+.suggest-chip.selected{border-color:var(--accent);background:var(--accent-soft)}
 
 .suggest-chip {
   background: var(--paper);

@@ -1,6 +1,6 @@
 /* Dedicated local export worker: no remote executable resources, network providers or DOM. */
 'use strict';
-importScripts('category-registry.js','search-languages.js', '../lib/taxonomy-engine.js', 'records.js', 'symbology.js', '../lib/xlsx.full.min.js', '../lib/export-utils.js');
+importScripts('category-registry.js','search-languages.js','quick-library.js', '../lib/taxonomy-engine.js', 'records.js', 'symbology.js', '../lib/xlsx.full.min.js', '../lib/export-utils.js');
 self.onmessage = async function (event) {
   const { requestId, format, records, prefix, categoryFilter, options = {} } = event.data || {};
   try {

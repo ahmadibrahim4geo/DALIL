@@ -36,7 +36,7 @@ function readStoredZip(bytes) {
 async function main() {
   const expected = Taxonomy.registry.getCategories().length + Taxonomy.getSectors().reduce((count, sector) => count + 1 + sector.branches.length, 0) + 1;
   assert.equal(catalog.entries.length, expected, 'Every category, sector, branch and fallback has a binding');
-  assert.equal(catalog.entries.length, 1254, 'R5 reviewed catalog size');
+  assert.equal(catalog.entries.length, 1255, 'R6 catalog includes the verified Google town_square type');
   assert.equal(manifest.resources.length, catalog.entries.length);
   const manifests = new Map(manifest.resources.map(resource => [resource.symbolId, resource]));
   const ids = new Set(), colors = new Set(), assetKeys = new Set(), pngHashes = new Set(), shapes = new Set(), byGlyph = new Map();

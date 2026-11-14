@@ -40,7 +40,7 @@ const out=process.env.DALIL_BROWSER_EVIDENCE_DIR;if(!out)throw Error('Set DALIL_
   assert.deepEqual(await stored('savedPhenomena'),expected);assert.equal((await stored('searchLanguageSettings')).locale,'hi');
   assert.deepEqual((await command({action:'GET_WORKSPACE'})).workspace.importedStudyArea.geometry,geometry);
   await start();await finish();let state=await command({action:'GET_STATUS'});
-  assert.deepEqual(state.config.queriesToRun,selections.map(v=>v[1]));assert.deepEqual(visits.map(v=>v.hl),selections.map(v=>v[0]));assert.deepEqual(visits.map(v=>v.query),selections.map(v=>v[1].trim()));
+  assert.deepEqual(state.config.queriesToRun,selections.map(v=>v[1]));assert.deepEqual(visits.map(v=>v.hl),selections.map(v=>v[0]));assert.deepEqual(visits.map(v=>v.query),selections.map(v=>v[1]));
   await page.screenshot({path:path.join(out,'multilingual-completed.png'),fullPage:true});
   await clear();await locale('fr');await choose('google_places:bakery','S02');await page.locator('#translationReviewPanel').waitFor({state:'visible'});
   const previousJob=state.jobId,priorVisits=visits.length;await start();await poll(async()=>alerts.length===1);state=await command({action:'GET_STATUS'});assert.equal(state.jobId,previousJob);assert.equal(visits.length,priorVisits);

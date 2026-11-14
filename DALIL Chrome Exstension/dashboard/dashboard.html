@@ -307,9 +307,12 @@
                   <span><i class="lg-done"></i><span data-i18n="lgDone">مكتملة</span></span>
                   <span><i class="lg-empty"></i><span data-i18n="lgEmpty">خالية</span></span>
                 </div>
-                <div id="mapSymbolLegend" class="map-symbol-legend" role="list" data-i18n-aria-label="categorySymbols"></div>
               </div>
 
+              <details class="result-symbols-panel">
+                <summary data-i18n="categorySymbols">رموز النتائج</summary>
+                <div id="mapSymbolLegend" class="map-symbol-legend" role="list" data-i18n-aria-label="categorySymbols"></div>
+              </details>
               <div class="map-foot">
                 <span><span data-i18n="mapProvider">خرائط Google</span> · <span class="mono">WGS 84</span></span>
                 <span class="mono" id="mapCellsFoot">0</span><span id="mapRenderNotice" class="caption" role="status"></span>
@@ -508,18 +511,10 @@
                   <svg class="icon sm"><use href="#ic-target"/></svg>
                   <span data-i18n="static51">مقترحات سريعة وشائعة (انقر للإضافة فوراً):</span>
                 </div>
-                <div class="suggest-chips-row" id="suggestedPhenomChips">
-                  <button type="button" class="suggest-chip" data-phenom="google_places:restaurant"><span data-i18n="static52">مطاعم</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:cafe"><span data-i18n="static53">مقاهٍ</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:pharmacy"><span data-i18n="static54">صيدليات</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:mosque"><span data-i18n="static55">مساجد</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:bank"><span data-i18n="static56">بنوك</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:supermarket"><span data-i18n="static57">سوبر ماركت</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:hotel"><span data-i18n="static58">فنادق</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:gas_station"><span data-i18n="static59">محطات وقود</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:hospital"><span data-i18n="static60">مستشفيات</span></button>
-                  <button type="button" class="suggest-chip" data-phenom="google_places:school"><span data-i18n="static61">مدارس</span></button>
-                </div>
+                <p class="caption" data-i18n="quickLibraryHint">اختيارات عامة تبحث بكلمات قليلة. يُحفظ نوع كل مكان كما يظهر في المصدر.</p>
+                <div class="suggest-chips-row quick-library-chips" id="suggestedPhenomChips"></div>
+                <button type="button" class="btn ghost small" id="btnQuickLibraryMore" aria-expanded="false" aria-controls="suggestedPhenomChips" data-i18n="quickShowMore">عرض المزيد</button>
+                <p class="caption" data-i18n="broadSearchNotice">البحث العام لا يضمن حصر جميع الأماكن. استخدم المكتبة التفصيلية للتوسع في أنواع محددة.</p>
               </div>
             </div>
 
@@ -960,6 +955,7 @@
   <script src="../lib/xlsx.full.min.js"></script>
   <script src="../core/category-registry.js"></script>
   <script src="../core/search-languages.js"></script>
+  <script src="../core/quick-library.js"></script>
   <script src="../lib/taxonomy-engine.js"></script>
   <script src="../lib/smart-brands.js"></script>
   <script src="../lib/spatial-utils.js"></script>

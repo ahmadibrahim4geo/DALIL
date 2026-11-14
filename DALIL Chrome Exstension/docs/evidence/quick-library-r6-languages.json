@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "browser": "151.0.7922.34",
+  "visits": [
+    {
+      "query": "  mosquée  ",
+      "hl": "fr"
+    },
+    {
+      "query": "panadería",
+      "hl": "es-AR"
+    },
+    {
+      "query": "Apotheke",
+      "hl": "de-DE"
+    },
+    {
+      "query": "清真寺",
+      "hl": "zh-CN"
+    },
+    {
+      "query": "図書館",
+      "hl": "ja"
+    },
+    {
+      "query": "padaria",
+      "hl": "pt-BR"
+    },
+    {
+      "query": "विद्यालय",
+      "hl": "hi"
+    },
+    {
+      "query": "boulangerie",
+      "hl": "fr"
+    },
+    {
+      "query": "Car wash",
+      "hl": "en"
+    }
+  ],
+  "expectedAlerts": 2,
+  "checks": [
+    "seven verbatim free-text locales survive interface change and reload",
+    "each Google URL uses its own requested hl and term",
+    "missing category translation blocks before changing job",
+    "manual French query term saved and executed",
+    "English fallback is explicit and uses hl=en",
+    "invalid BCP47 blocks requests",
+    "clearing all targets persists across reload",
+    "source documents are controlled fixtures; worldwide live coverage not tested"
+  ]
+}
