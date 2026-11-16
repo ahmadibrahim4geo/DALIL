@@ -74,13 +74,13 @@ node test/test_comprehensive_audit.js
 node tools/project-hygiene.js
 ```
 
-الأمر الأول يشغّل المجموعة الأساسية، بما فيها اختبار المكتبة السريعة. التدقيق الشامل يغطي 30 سيناريو، وأمر فحص التكرار يعمل بالقراءة فقط دون `--apply`.
+الأمر الأول يشغّل المجموعة الأساسية لاختبارات المحرك، والاستخراج، والشبكة، والتصدير، والتشخيص. التدقيق الشامل يغطي 30 سيناريو، وأمر فحص التكرار يعمل بالقراءة فقط دون `--apply`.
 
 لتشغيل اختبارات المتصفح، يلزم تثبيت Playwright وChromium في بيئة التطوير. عند استخدام مكتبة خارج المجلد، عيّن `DALIL_PLAYWRIGHT_MODULE` إلى مسارها؛ ويمكن تحديد `PLAYWRIGHT_BROWSERS_PATH` لمكان المتصفح. اختر مجلد أدلة معزولًا:
 
 ```powershell
-$env:DALIL_BROWSER_EVIDENCE_DIR = Join-Path $env:TEMP 'dalil-quick-library-evidence'
-npm.cmd run test:quick:browser
+$env:DALIL_BROWSER_EVIDENCE_DIR = Join-Path $env:TEMP 'dalil-browser-evidence'
+npm.cmd test
 node test/test_search_languages_browser.js
 ```
 
@@ -92,8 +92,6 @@ node test/test_search_languages_browser.js
 node tools/audit-google-place-types.cjs
 ```
 
-[أدلة قبول R6](docs/evidence/quick-library-r6-acceptance.json) · [اختبار المكتبة في Chromium](docs/evidence/quick-library-r6-browser.json) · [اختبار اللغات السبع](docs/evidence/quick-library-r6-languages.json).
-
 ## بنية الإضافة
 
 ```text
@@ -101,7 +99,7 @@ manifest.json              تعريف الإضافة والصلاحيات
 background/                إدارة المهام والخلايا وحفظ التقدم
 content/                   قراءة صفحات مصدر البحث
 dashboard/                 لوحة التحكم والخريطة والجدول
-core/                      التصنيفات واللغات والمكتبة السريعة والرموز والسجلات
+core/                      التصنيفات واللغات والتشخيص والرموز والسجلات والتخزين
 lib/                       هندسة الشبكة والتصدير والمكتبات المرفقة
 assets/                    هوية المشروع والرموز المحلية
 docs/                      التوثيق ومصادر الموارد وأدلة التحقق
@@ -111,7 +109,7 @@ tools/                     أدوات تدقيق وتطوير اختيارية
 
 ## أدلة إضافية والمساهمة
 
-[مساحة العمل](docs/UI_WORKSPACE_R2.md) · [استيراد الطرق والنقاط](docs/IMPORT_GEOMETRY_R3.md) · [المكتبة والشبكة](docs/LIBRARY_GRID_R4.md) · [اللغات والرموز](docs/LANGUAGES_SYMBOLS_R5.md) · [المكتبة السريعة](docs/QUICK_LIBRARY_R6.md) · [حالة التنفيذ](docs/IMPLEMENTATION_STATUS.md).
+[مساحة العمل](docs/UI_WORKSPACE_R2.md) · [استيراد الطرق والنقاط](docs/IMPORT_GEOMETRY_R3.md) · [المكتبة والشبكة](docs/LIBRARY_GRID_R4.md) · [اللغات والرموز](docs/LANGUAGES_SYMBOLS_R5.md) · [موثوقية المسح والتشخيص](docs/SURVEY_RELIABILITY.md) · [تقرير التشخيص الشامل](docs/DALIL_DIAGNOSTIC_REPORT_2026-11-14.md) · [حالة التنفيذ](docs/IMPLEMENTATION_STATUS.md).
 
 راجع [المساهمة](CONTRIBUTING.md) و[الإبلاغ الأمني](SECURITY.md). المطور **أحمد إبراهيم / Ahmad Ibrahim**: [GitHub](https://github.com/ahmadibrahim4geo) · [البورتفوليو](https://ahmadibrahim4geo.github.io/ahmadibrahim4geo/).
 

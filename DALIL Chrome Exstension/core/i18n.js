@@ -48,6 +48,7 @@ const messages = {
     "PUBLIC_SOURCE_JOB_LIMIT": "تجاوزت المهمة حد الخدمة العامة البالغ 100 استعلام خلية. قلل عدد الخلايا أو الفئات.",
     "PUBLIC_DAILY_LIMIT": "بلغت حد الطلبات اليومي للخدمة العامة. أُوقفت المهمة مع حفظ التقدم.",
     "SOURCE_COOLDOWN": "المصدر طلب الانتظار. استأنف بعد انتهاء المهلة.",
+    "WORKER_TAB_CLOSED": "أُغلق تبويب البحث. استأنف لفتحه ومتابعة الخلية الحالية؛ النتائج المحفوظة باقية.",
     "WORKSPACE_LOCKED": "أوقف المهمة قبل تعديل مساحة العمل.",
     "GRID_REQUIRED": "حدّد منطقة دراسة وأنشئ شبكة أولاً.",
     "JOB_ACTIVE": "توجد مهمة تعمل بالفعل.",
@@ -123,8 +124,7 @@ const messages = {
     "static47": "لم يتم استخراج أي بيانات بعد. حدّد الظاهرات، ارسم منطقة الدراسة، ثم اضغط «بدء الاستخراج».",
     "static48": "عرض 0 من أصل 0",
     "static49": "إضافة الظاهرة",
-    "static50": "لم تتم إضافة أي ظاهرة بعد. اكتب اسم الظاهرة واضغط «إضافة» أو اختر من المكتبة والمقترحات.",
-    "static51": "مقترحات سريعة وشائعة (انقر للإضافة فوراً):",
+    "static50": "لم تتم إضافة أي ظاهرة بعد. اكتب اسم الظاهرة واضغط «إضافة» أو اختر من المكتبة التفصيلية.",
     "static52": "🍽️ مطاعم",
     "static53": "☕ كافيهات",
     "static54": "💊 صيدليات",
@@ -231,6 +231,7 @@ const messages = {
     "PUBLIC_SOURCE_JOB_LIMIT": "This job exceeds the public service limit of 100 cell queries. Reduce the grid or category scope.",
     "PUBLIC_DAILY_LIMIT": "The public service daily request limit has been reached. Progress is saved.",
     "SOURCE_COOLDOWN": "The provider requested a cooldown. Resume after the waiting period.",
+    "WORKER_TAB_CLOSED": "The search tab closed. Resume to reopen it and continue the current cell; saved results remain available.",
     "WORKSPACE_LOCKED": "Stop the job before editing the workspace.",
     "GRID_REQUIRED": "Define a study area and generate a grid first.",
     "JOB_ACTIVE": "A job is already active.",
@@ -306,8 +307,7 @@ const messages = {
     "static47": "No records yet. Choose features, define a study area and start a survey.",
     "static48": "Showing 0 of 0",
     "static49": "Add feature",
-    "static50": "No target features yet. Enter a term or choose from the library.",
-    "static51": "Quick suggestions: click to add",
+    "static50": "No target features yet. Enter a term or choose from the detailed library.",
     "static52": "🍽️ Restaurants",
     "static53": "☕ Cafes",
     "static54": "💊 Pharmacies",
@@ -378,28 +378,22 @@ Object.assign(messages.ar,{lblUploadArea:"استيراد مضلع أو طريق 
 Object.assign(messages.en,{lblUploadArea:"Import polygons, roads or points from a file",importCrsHint:"WGS84 (EPSG:4326) is required. Include the PRJ file in Shapefile ZIPs when available."});
 Object.assign(messages.ar,{gridPrecisionLimit:"الخلايا أصغر من دقة الإحداثيات. قلّل الصفوف أو الأعمدة، أو زد مسافة البحث.",importSizeLimit:"حجم ملف الاستيراد يتجاوز ٦٤ ميبيبايت. قسّم الملف قبل الاستيراد."});
 Object.assign(messages.en,{gridPrecisionLimit:"Cells are smaller than the coordinate precision. Reduce rows or columns, or increase the search distance.",importSizeLimit:"The import file exceeds 64 MiB. Split the file before importing."});
-Object.assign(messages.ar,{lgPartial:"جزئية / حد النتائج",lgUnknown:"غير محسومة",lgError:"خطأ / تعذر البحث",categorySymbols:"رموز الفئات الظاهرة",showEarlyDiscoveries:"إظهار اكتشافات الخلايا التي لم يبدأ فحصها",earlyDiscoveriesHidden:"اكتشافًا مبكرًا محفوظًا؛ لم تظهر رموزها لأن خلايا ملكيتها لم يبدأ فحصها.",earlyDiscoveriesShown:"اكتشافًا مبكرًا معروضًا بإطار متقطع؛ خلايا ملكيتها لم يبدأ فحصها.",earlyDiscoveryDetail:"اكتشاف مبكر من خلية أخرى؛ لم يبدأ فحص الخلية المالكة بعد. ظهور المكان لا يعني اكتمال فحص خليته.",taxonomyModelNotice:"كل زر يمثل مفهومًا واحدًا. يُميّز نوع Google عن مفاهيم DALIL؛ المرادفات والصفات ليست أنواع Google إضافية. مرّر المؤشر لمراجعة عبارات البحث المرتبطة.",categoryAliases:"مرادفات محلية",categoryDescriptors:"عبارات وصفية للبحث، وليست حقائق مثبتة",googleTypeLabel:"نوع Google Places",dalilConceptLabel:"مفهوم DALIL",NAVIGATION_VIEW_MISMATCH:"توقف البحث مؤقتًا: لم يُؤكَّد انتقال مركز Google إلى الخلية المطلوبة. راجع تبويب المصدر ثم أعد المحاولة.",NAVIGATION_FAILED:"توقف البحث مؤقتًا: لم يكتمل انتقال تبويب المصدر إلى الخلية المطلوبة."});
-Object.assign(messages.en,{lgPartial:"Partial / capped",lgUnknown:"Unknown",lgError:"Error / unavailable",categorySymbols:"Visible category symbols",showEarlyDiscoveries:"Show discoveries in cells whose survey has not started",earlyDiscoveriesHidden:"early discoveries retained; their owner cells have not started, so their symbols are hidden.",earlyDiscoveriesShown:"early discoveries shown with dashed outlines; their owner cells have not started.",earlyDiscoveryDetail:"Early discovery from another cell; its owner cell has not started. A visible place does not establish survey completion.",taxonomyModelNotice:"Each button represents one concept. Google types and DALIL concepts are labelled separately; aliases and descriptors are not additional Google types. Hover to review related search terms.",categoryAliases:"Local aliases",categoryDescriptors:"Descriptive search terms, not verified facts",googleTypeLabel:"Google Places type",dalilConceptLabel:"DALIL concept",NAVIGATION_VIEW_MISMATCH:"Search paused: the Google camera could not be confirmed at the requested cell. Check the source tab and retry.",NAVIGATION_FAILED:"Search paused: source navigation to the requested cell did not complete."});
+Object.assign(messages.ar,{lgPartial:"جزئية / حد النتائج",lgUnknown:"غير محسومة",lgError:"خطأ / تعذر البحث",categorySymbols:"رموز الفئات الظاهرة",showEarlyDiscoveries:"إظهار اكتشافات الخلايا التي لم يبدأ فحصها",earlyDiscoveriesHidden:"اكتشافًا مبكرًا محفوظًا؛ لم تظهر رموزها لأن خلايا ملكيتها لم يبدأ فحصها.",earlyDiscoveriesShown:"اكتشافًا مبكرًا معروضًا بإطار متقطع؛ خلايا ملكيتها لم يبدأ فحصها.",earlyDiscoveryDetail:"اكتشاف مبكر من خلية أخرى؛ لم يبدأ فحص الخلية المالكة بعد. ظهور المكان لا يعني اكتمال فحص خليته.",taxonomyModelNotice:"كل زر يمثل مفهومًا واحدًا. يُميّز نوع Google عن مفاهيم DALIL؛ المرادفات والصفات ليست أنواع Google إضافية. مرّر المؤشر لمراجعة عبارات البحث المرتبطة.",categoryAliases:"مرادفات محلية",categoryDescriptors:"عبارات وصفية للبحث، وليست حقائق مثبتة",googleTypeLabel:"نوع Google Places",dalilConceptLabel:"مفهوم DALIL",NAVIGATION_VIEW_MISMATCH:"توقف البحث مؤقتًا: لم يُؤكَّد انتقال مركز Google إلى الخلية المطلوبة. راجع تبويب المصدر ثم أعد المحاولة.",NAVIGATION_FAILED:"توقف البحث مؤقتًا: لم يكتمل انتقال تبويب المصدر إلى الخلية المطلوبة.",CAMERA_NOT_AT_CELL:"توقف البحث مؤقتًا: صفحة الخلية لم تتمركز فوق الخلية حتى بعد إعادة تحميلها مرة واحدة، فلا تُقرأ نتائج حيٍّ آخر. راجع تبويب المصدر ثم استأنف.",STALE_DOCUMENT:"توقف البحث مؤقتًا: الصفحة المعروضة هي صفحة سابقة لم تُستبدل. استأنف لإعادة فتح صفحة الخلية من جديد."});
+Object.assign(messages.en,{lgPartial:"Partial / capped",lgUnknown:"Unknown",lgError:"Error / unavailable",categorySymbols:"Visible category symbols",showEarlyDiscoveries:"Show discoveries in cells whose survey has not started",earlyDiscoveriesHidden:"early discoveries retained; their owner cells have not started, so their symbols are hidden.",earlyDiscoveriesShown:"early discoveries shown with dashed outlines; their owner cells have not started.",earlyDiscoveryDetail:"Early discovery from another cell; its owner cell has not started. A visible place does not establish survey completion.",taxonomyModelNotice:"Each button represents one concept. Google types and DALIL concepts are labelled separately; aliases and descriptors are not additional Google types. Hover to review related search terms.",categoryAliases:"Local aliases",categoryDescriptors:"Descriptive search terms, not verified facts",googleTypeLabel:"Google Places type",dalilConceptLabel:"DALIL concept",NAVIGATION_VIEW_MISMATCH:"Search paused: the Google camera could not be confirmed at the requested cell. Check the source tab and retry.",NAVIGATION_FAILED:"Search paused: source navigation to the requested cell did not complete.",CAMERA_NOT_AT_CELL:"Search paused: the cell page did not centre on the cell even after one clean reload, so another neighbourhood's results are not read. Check the source tab and resume.",STALE_DOCUMENT:"Search paused: the page on screen is the previous one and was not replaced. Resume to reopen the cell page."});
 Object.assign(messages.ar,{statusPaused:"متوقف مؤقتًا",static52:"مطاعم",static53:"مقاهٍ",static54:"صيدليات",static55:"مساجد",static56:"بنوك",static57:"سوبر ماركت",static58:"فنادق",static59:"محطات وقود",static60:"مستشفيات",static61:"مدارس",static63:"فئات موحدة مع فصل أنواع Google والمرادفات والصفات.",phenomUnifiedSubtitle:"اختر مفاهيم موحدة من المكتبة أو اكتب عبارة بحث مخصصة.",optQueryPlanComp:"شامل — تنفيذ جميع الاستعلامات المخططة",queryHintSymbol:"الرمز مبني على عبارة البحث؛ لم يؤكّد المصدر نوع المكان."});
 Object.assign(messages.en,{statusPaused:"Paused",static52:"Restaurants",static53:"Cafes",static54:"Pharmacies",static55:"Mosques",static56:"Banks",static57:"Supermarkets",static58:"Hotels",static59:"Fuel stations",static60:"Hospitals",static61:"Schools",static63:"Canonical concepts with separate Google types, aliases and descriptors.",phenomUnifiedSubtitle:"Choose canonical concepts from the library or enter a custom search term.",optQueryPlanComp:"Comprehensive — execute every planned query",queryHintSymbol:"The symbol uses the search term; the source has not confirmed the place type."});
 Object.assign(messages.ar,{customSearchLocale:"لغة أخرى — رمز BCP 47",allowEnglishSearchFallback:"السماح بالإنجليزية للفئات التي لا يتوفر لها مصطلح بهذه اللغة",translationReviewTitle:"مصطلحات بحث تحتاج تحديدًا",translationReviewHint:"اكتب مصطلح البحث للفئات الناقصة باللغة المختارة. يمكن أيضًا السماح بالإنجليزية صراحة من إعدادات اللغة.",saveQueryTerms:"حفظ مصطلحات البحث",translationBatchHint:"تُعرض أول ٤٠ فئة؛ احفظ مصطلحاتها لعرض الدفعة التالية.",missingQueryTerms:"مصطلح بحث ناقص؛ راجع الفئات المختارة",plannedLocaleQueries:"استعلامًا مخططًا",explicitEnglishFallback:"الاستعانة بالإنجليزية مفعلة باختيارك",providerLocaleNotice:"قد تختلف لغة بيانات المصدر عن لغة البحث.",INVALID_LOCALE:"أدخل رمز لغة صحيحًا، مثل fr أو de-DE أو zh-Hant.",INVALID_QUERY_TERM:"مصطلح البحث يجب أن يكون غير فارغ وألا يتجاوز ١٠٠٠ حرف.",MISSING_QUERY_TRANSLATION:"حدد مصطلحات البحث الناقصة باللغة المختارة أو اسمح بالإنجليزية صراحة قبل بدء المهمة.",SEARCH_LANGUAGES_UNAVAILABLE:"وحدة لغات البحث غير محملة؛ أعد تحميل الإضافة."});
 Object.assign(messages.en,{customSearchLocale:"Another language — BCP 47 code",allowEnglishSearchFallback:"Allow English for categories without a term in the requested language",translationReviewTitle:"Search terms need your input",translationReviewHint:"Enter terms for missing categories in the selected language. You can also explicitly allow English in the language settings.",saveQueryTerms:"Save search terms",translationBatchHint:"The first 40 categories are shown; save their terms to see the next batch.",missingQueryTerms:"missing search terms; review the selected categories",plannedLocaleQueries:"planned queries",explicitEnglishFallback:"English fallback explicitly enabled",providerLocaleNotice:"Source data may use a different language from the query.",INVALID_LOCALE:"Enter a valid language tag, such as fr, de-DE or zh-Hant.",INVALID_QUERY_TERM:"A query term must be nonempty and at most 1,000 characters.",MISSING_QUERY_TRANSLATION:"Provide the missing search terms in the selected language or explicitly allow English before starting.",SEARCH_LANGUAGES_UNAVAILABLE:"The search language module is not loaded; reload the extension."});
 Object.assign(messages.ar,{
-  static51:"المكتبة السريعة — بحث عام",static62:"المكتبة التفصيلية",
+  static62:"المكتبة التفصيلية",
   static63:"أنواع Google Places القابلة للاختيار مع مفاهيم دليل المحلية. بعض الأنواع متاحة باسمها الإنجليزي؛ مصطلح البحث يُحدد حسب اللغة.",
-  phenomUnifiedSubtitle:"اختر نشاطًا عامًا، أو حدد نوعًا من المكتبة التفصيلية، أو اكتب أي عبارة بحث بلغتك.",
-  quickLibraryHint:"كل اختيار هدف عام بكلمات قليلة، ويُصنّف كل مكان حسب نوعه في المصدر.",
-  broadSearchNotice:"البحث العام لا يضمن حصر جميع الأماكن. استخدم المكتبة التفصيلية للتوسع في أنواع محددة.",
-  quickShowMore:"عرض المزيد",quickShowLess:"عرض أقل",
+  phenomUnifiedSubtitle:"حدد نوعًا من المكتبة التفصيلية، أو اكتب أي عبارة بحث بلغتك.",
   categorySymbols:"رموز النتائج",inputPlaceholder:"اكتب أي عبارة بحث، حتى لو كانت موجودة في المكتبة"
 });
 Object.assign(messages.en,{
-  static51:"Quick library — broad search",static62:"Detailed library",
+  static62:"Detailed library",
   static63:"Selectable Google Places types and local DALIL concepts. Some types use English display labels; search terms follow the selected language.",
-  phenomUnifiedSubtitle:"Choose a broad activity, select a specific type, or enter any search phrase in your language.",
-  quickLibraryHint:"Each selection searches a few broad terms. Results keep their source place types.",
-  broadSearchNotice:"Broad search does not guarantee every place. Use the detailed library to explore specific types.",
-  quickShowMore:"Show more",quickShowLess:"Show less",
+  phenomUnifiedSubtitle:"Select a specific type from the detailed library, or enter any search phrase in your language.",
   categorySymbols:"Result symbols",inputPlaceholder:"Enter any search phrase, including terms already in the library"
 });
 function register(locale,dictionary){if(!locale || !dictionary) throw new Error("Invalid locale");messages[locale]={...(messages[locale]||{}),...dictionary};}

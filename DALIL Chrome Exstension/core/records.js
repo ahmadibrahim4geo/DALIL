@@ -103,6 +103,12 @@
           if (other.cid && record.cid && other.cid !== record.cid) continue;
           if (normalizeName(other.name) !== name) continue;
           if (other.category && record.category && normalizeName(other.category) !== normalizeName(record.category)) continue;
+          // تعارض في حقل هوية صريح (هاتف/موقع/عنوان) يثبت أنهما مكانان مختلفان حتى على 25 مترًا.
+          const contradicts = key => {
+            const a = other[key], b = record[key];
+            return a != null && a !== '' && b != null && b !== '' && String(a).trim() !== String(b).trim();
+          };
+          if (contradicts('phone') || contradicts('website') || contradicts('address') || contradicts('formatted_address')) continue;
           if (distanceMeters(other, record) <= 25) return index;
         }
       }

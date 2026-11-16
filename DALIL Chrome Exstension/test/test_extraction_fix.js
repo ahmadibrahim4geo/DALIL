@@ -1,26 +1,13 @@
 const assert = require("assert");
 
-// Test resolveCellZoom logic
-function resolveCellZoom(cell, configZoom) {
-  if (configZoom && configZoom !== "auto" && !isNaN(parseInt(configZoom))) {
-    return Math.min(20, Math.max(12, parseInt(configZoom)));
-  }
-  if (cell && cell.bounds) {
-    const latSpan = Math.abs(cell.bounds.maxLat - cell.bounds.minLat);
-    const lngSpan = Math.abs(cell.bounds.maxLng - cell.bounds.minLng);
-    const maxSpan = Math.max(latSpan, lngSpan);
-    if (maxSpan > 0.35) return 11;
-    if (maxSpan > 0.18) return 12;
-    if (maxSpan > 0.09) return 13;
-    if (maxSpan > 0.04) return 14;
-    if (maxSpan > 0.018) return 15;
-    if (maxSpan > 0.007) return 16;
-    if (maxSpan > 0.0025) return 17;
-    if (maxSpan > 0.001) return 18;
-    return 19;
-  }
-  return 15;
-}
+// تغطية الخلية: كم يجب أن يكون التكبير كي يحتوي عرض الخريطة الخلية كاملة.
+const Navigation = require("../core/search-navigation.js");
+const pixels = { width: 1280, height: 800 };
+const zoomFor = bounds => Navigation.zoomForBounds(bounds, pixels);
+const coversAt = (bounds, zoom) => Navigation.covers(
+  Navigation.viewportBox((bounds.minLat + bounds.maxLat) / 2, (bounds.minLng + bounds.maxLng) / 2, pixels, zoom),
+  bounds
+);
 
 // Test isWithinCellBounds & isPlaceInStudyOrCell logic
 function isWithinCellBounds(x, y, bounds, defaultMargin = 0.0015) {
@@ -56,25 +43,25 @@ console.log("=========================================");
 console.log("🧪 DALIL Extraction & Zoom Logic Test");
 console.log("=========================================");
 
-// 1. Test auto-zoom calculation
+// 1. التكبير المحسوب يجعل العرض يحتوي الخلية كاملة — عند أي حجم خلية.
 const wideCell = { bounds: { minLat: 30.0, maxLat: 30.2, minLng: 31.0, maxLng: 31.2 } };
-assert.strictEqual(resolveCellZoom(wideCell, "auto"), 12, "Wide cell should resolve to zoom 12");
-
 const cityCell = { bounds: { minLat: 30.0, maxLat: 30.05, minLng: 31.0, maxLng: 31.05 } };
-assert.strictEqual(resolveCellZoom(cityCell, "auto"), 14, "City cell should resolve to zoom 14");
-
 const districtCell = { bounds: { minLat: 30.0, maxLat: 30.02, minLng: 31.0, maxLng: 31.02 } };
-assert.strictEqual(resolveCellZoom(districtCell, "auto"), 15, "District cell should resolve to zoom 15");
-
 const blockCell = { bounds: { minLat: 30.0, maxLat: 30.005, minLng: 31.0, maxLng: 31.005 } };
-assert.strictEqual(resolveCellZoom(blockCell, "auto"), 17, "Block cell should resolve to zoom 17");
-
 const microCell = { bounds: { minLat: 30.0, maxLat: 30.0005, minLng: 31.0, maxLng: 31.0005 } };
-assert.strictEqual(resolveCellZoom(microCell, "auto"), 19, "Micro cell should resolve to zoom 19");
-
-assert.strictEqual(resolveCellZoom(blockCell, "19"), 19, "Explicit zoom 19 should be respected");
-assert.strictEqual(resolveCellZoom(blockCell, "14"), 14, "Explicit zoom 14 should be respected");
-console.log("✅ [PASS] Dynamic zoom resolution accurately adapts to cell bounds or explicit user choice (including 19z)");
+for (const [name, cell] of Object.entries({ wideCell, cityCell, districtCell, blockCell, microCell })) {
+  const zoom = zoomFor(cell.bounds);
+  assert.ok(zoom >= 10 && zoom <= 20, `${name}: zoom must stay usable (${zoom})`);
+  assert.strictEqual(coversAt(cell.bounds, zoom), true, `${name}: the map viewport must contain the whole cell`);
+  // تكبير أعلى يضيّق العرض عن الخلية: هذا بالضبط ما كان يقطع القراءة قبل نهايتها.
+  const narrower = zoom >= 20 ? zoom + 2 : zoom + 1;
+  assert.strictEqual(coversAt(cell.bounds, narrower), false, `${name}: a narrower viewport must fail coverage`);
+}
+// الخلية النموذجية (نحو 1.2 كم) — الحالة التي اشتكى منها المستخدم: 16z لا 17z.
+const complained = { minLat: 29.3600, maxLat: 29.3708, minLng: 30.9250, maxLng: 30.9360 };
+assert.strictEqual(zoomFor(complained), 16, "A ~1.2 km cell needs 16z so its full height fits the viewport");
+assert.strictEqual(coversAt(complained, 17), false, "17z is shorter than the cell, which ended the list too early");
+console.log("✅ [PASS] Coverage-based zoom keeps the whole cell inside the map viewport at every cell size");
 
 // 2. Test spatial boundary verification
 const cellInfo = {

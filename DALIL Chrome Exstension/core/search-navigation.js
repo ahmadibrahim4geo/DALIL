@@ -8,11 +8,62 @@
  function distance(a,b){const r=Math.PI/180,dlat=(a.lat-b.lat)*r,dlng=(a.lng-b.lng)*r,h=Math.sin(dlat/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dlng/2)**2;return 12742017.6*Math.asin(Math.min(1,Math.sqrt(h)));}
  function verify(actual,target,searchValue='',toleranceMeters=25){
   let a,b;try{a=new URL(actual);b=new URL(target);}catch(_){return {verified:false,reason:'invalid_url'};}
+  if(a.origin!==b.origin||!a.pathname.startsWith('/maps/'))return {verified:false,reason:'invalid_origin_or_path'};
   const requested=view(target),observed=view(actual),expectedQuery=query(target),actualQuery=query(actual),box=normalizeQuery(searchValue);
-  const queryVerified=!!expectedQuery&&(actualQuery===expectedQuery||box===expectedQuery),centerErrorMeters=requested&&observed?distance(requested,observed):null;
+  const queryVerified=Boolean(!expectedQuery||actualQuery===expectedQuery||box===expectedQuery||(actualQuery&&expectedQuery&&actualQuery.includes(expectedQuery))||(box&&expectedQuery&&box.includes(expectedQuery)));
+  const centerErrorMeters=requested&&observed?distance(requested,observed):null;
   const centerVerified=centerErrorMeters!==null&&centerErrorMeters<=toleranceMeters;
-  return {verified:a.origin===b.origin&&a.pathname.startsWith('/maps/')&&queryVerified&&centerVerified,queryVerified,centerVerified,centerErrorMeters,requested,observed,
+  return {verified:Boolean(queryVerified&&centerVerified),queryVerified,centerVerified,centerErrorMeters,requested,observed,
    reason:!queryVerified?'query_mismatch':!centerVerified?'camera_mismatch':'verified_url_camera',evidenceKind:'url_camera; not a hard geographic result filter'};
  }
- const api={view,query,normalizeQuery,searchValue,distance,verify};root.DalilSearchNavigation=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+ /* Coverage geometry: what the map actually shows at a given camera and zoom.
+  * Google scopes its result list to the visible map viewport, so a view whose
+  * viewport is smaller than the cell cannot have read the whole cell. */
+ const WORLD_METERS_PER_PIXEL_AT_ZOOM_0=156543.03392;
+ const DEFAULT_PIXELS=Object.freeze({width:1280,height:800});
+ function pixelsOf(pixels){return {width:Math.max(320,Number(pixels?.width)||DEFAULT_PIXELS.width),
+  height:Math.max(240,Number(pixels?.height)||DEFAULT_PIXELS.height)};}
+ function metersPerPixel(lat,zoom){const z=Number(zoom),safe=Number.isFinite(z)?z:16;
+  const value=WORLD_METERS_PER_PIXEL_AT_ZOOM_0*Math.cos((Number(lat)||0)*Math.PI/180)/Math.pow(2,safe);
+  return Number.isFinite(value)&&value>0?value:null;}
+ function spanMeters(bounds){
+  if(!bounds||bounds.minLat===undefined)return null;
+  const midLat=(Number(bounds.minLat)+Number(bounds.maxLat))/2;
+  const height=Math.abs(Number(bounds.maxLat)-Number(bounds.minLat))*110574;
+  const width=Math.abs(Number(bounds.maxLng)-Number(bounds.minLng))*111320*Math.cos(midLat*Math.PI/180);
+  return Number.isFinite(width)&&Number.isFinite(height)?{width,height,midLat}:null;
+ }
+ /** أعلى تكبير لا يزال عرضه يحتوي نطاق الخلية كاملًا. أي تكبير أعلى يعني تغطية جزئية. */
+ function zoomForBounds(bounds,pixels,margin=1.06){
+  const span=spanMeters(bounds);if(!span)return 16;
+  const px=pixelsOf(pixels);
+  const needed=Math.max(span.width*margin/px.width,span.height*margin/px.height);
+  const mpp=metersPerPixel(span.midLat,0);
+  if(!(needed>0)||!mpp)return 16;
+  const raw=Math.log2(mpp/needed);
+  return Math.max(10,Math.min(20,Math.floor(raw)));
+ }
+ function viewportBox(centerLat,centerLng,pixels,zoom){
+  const px=pixelsOf(pixels),mpp=metersPerPixel(centerLat,zoom);
+  if(!mpp||!Number.isFinite(Number(centerLat))||!Number.isFinite(Number(centerLng)))return null;
+  const halfLat=(px.height*mpp/2)/110574;
+  const halfLng=(px.width*mpp/2)/(111320*Math.cos(Number(centerLat)*Math.PI/180));
+  return {minLat:Number(centerLat)-halfLat,maxLat:Number(centerLat)+halfLat,
+   minLng:Number(centerLng)-halfLng,maxLng:Number(centerLng)+halfLng,
+   widthMeters:px.width*mpp,heightMeters:px.height*mpp};
+ }
+ function covers(box,bounds,epsilonMeters=20){
+  if(!box||!bounds||bounds.minLat===undefined)return false;
+  const midLat=(Number(bounds.minLat)+Number(bounds.maxLat))/2;
+  const latSpan=Math.abs(Number(bounds.maxLat)-Number(bounds.minLat));
+  const lngSpan=Math.abs(Number(bounds.maxLng)-Number(bounds.minLng));
+  const tolerance=Math.max(0,Number(epsilonMeters)||0);
+  // سماحية صغيرة لا تتجاوز 5% من الخلية، حتى لا تُعتبر خلية صغيرة «مغطاة» بفراغ كبير.
+  const epsLat=Math.min(tolerance/110574,latSpan*0.05);
+  const epsLng=Math.min(tolerance/(111320*Math.max(0.2,Math.cos(midLat*Math.PI/180))),lngSpan*0.05);
+  return box.minLat<=Number(bounds.minLat)+epsLat && box.maxLat>=Number(bounds.maxLat)-epsLat &&
+   box.minLng<=Number(bounds.minLng)+epsLng && box.maxLng>=Number(bounds.maxLng)-epsLng;
+ }
+ const api={view,query,normalizeQuery,searchValue,distance,verify,metersPerPixel,spanMeters,zoomForBounds,viewportBox,covers,pixelsOf,DEFAULT_PIXELS};
+ root.DalilSearchNavigation=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:self);

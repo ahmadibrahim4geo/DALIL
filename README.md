@@ -10,21 +10,19 @@
 
 دَلِيل إضافة Chrome مفتوحة المصدر للبحث المكاني عبر شبكة خلايا، ومراجعة بيانات الأماكن وتصنيفاتها وإحداثياتها، وتصدير السجلات المسموح بإعادة استخدامها إلى Excel وأدوات GIS. الواجهة عربية افتراضيًا مع واجهة إنجليزية، ولغة البحث مستقلة عنهما.
 
-[دليل الاستخدام والتطوير](<DALIL Chrome Exstension/README.md>) · [سجل التغييرات](CHANGELOG.md) · [تفاصيل التحديث الأخير](<DALIL Chrome Exstension/docs/QUICK_LIBRARY_R6.md>) · [English overview](#english-overview)
+[دليل الاستخدام والتطوير](<DALIL Chrome Exstension/README.md>) · [سجل التغييرات](CHANGELOG.md) · [موثوقية المسح والتشخيص](<DALIL Chrome Exstension/docs/SURVEY_RELIABILITY.md>) · [English overview](#english-overview)
 
 ## الجديد في 2.1.0
 
-| طريقة البحث | الاستخدام |
+| الميزة | الوصف والتأثير |
 | --- | --- |
-| **المكتبة السريعة** | 38 اختيارًا عامًا، مثل المطاعم والمساجد والكنائس والشركات والمصانع، بمصطلحات قليلة لكل هدف دون اختيار جميع الأنواع الفرعية. |
-| **المكتبة التفصيلية** | 1075 مفهومًا معروضًا لاختيار أنشطة محددة؛ تشمل جميع أنواع Google Places المنشورة القابلة للاختيار. |
-| **البحث الحر** | اكتب أي عبارة بلغتك، حتى لو موجودة في المكتبة. تظل عبارة بحث حرة كما كتبتها، مع رمز معروف عند توفره أو علامة عامة. |
+| **موثوقية المسح الميداني** | تجاوز انزياح الكاميرا الإرشادي، وانتظار رسم بطاقات الـ SPA، وميزانية قراءة تعطي الأولوية لمعالم الخلية (In-cell First) دون اقتطاعها لصالح الأماكن البعيدة. |
+| **لوحة التشخيص الصريح** | بطاقة تنبيهية توضح سبب أي توقف أو عدم حفظ سجلات (`PAGE_NOT_RENDERED`، خارج النطاق، تكرار، مجهول الإحداثيات) بدل الصفر الصامت. |
+| **إثبات التغطية الهندسية** | احتساب التكبير التلقائي الذكي بحسابات دقيقة لحجم الخلية بالبكسل، وخفض الحالة عند نقص العرض المرئي لضمان عدم وسم خلية بالمكتملة دون فحصها كاملة. |
+| **المكتبة التفصيلية الشاملة** | 31 قطاعًا جغرافيًا، 114 فرعًا تخصصيًا، 940 فئة معتمدة (1075 مفهومًا معروضًا) تغطي 478 نوع Google Places قابلًا للاختيار و36 نوع رد. |
+| **البحث الحر متعدد اللغات** | كتابة أي استعلام نصي حر بأي لغة مع حفظه حرفيًا وفصل لغة البحث عن لغة الواجهة، مع ربطه برمز محلي ملون. |
 
 يُصنَّف كل مكان حسب نوعه في المصدر، بدل تكرار تصنيف هدف البحث على جميع النتائج. تظهر حالة التنفيذ عند العناصر المستهدفة، ويقع مفتاح رموز النتائج في قسم قابل للطي خارج مساحة الخريطة.
-
-![واجهة المكتبة السريعة في دليل](<DALIL Chrome Exstension/docs/images/quick-library-ar.png>)
-
-*واجهة فعلية من اختبار Chromium ببيانات تجريبية؛ ليست دليلًا على اكتمال نتائج مصدر حي.*
 
 ## التثبيت
 
@@ -44,11 +42,9 @@
 
 1. ارسم منطقة دراسة أو استورد ملف نقاط أو طرق أو مضلعات بإحداثيات WGS 84. للنقاط والطرق، حدّد مسافة البحث بالمتر.
 2. أنشئ شبكة الخلايا المناسبة للمنطقة.
-3. اختر نشاطًا عامًا من المكتبة السريعة، أو نوعًا محددًا من المكتبة التفصيلية، أو اكتب عبارتك.
+3. اختر نشاطًا مصنفًا من المكتبة التفصيلية، أو اكتب عبارتك الحرة باللغة التي تختارها.
 4. حدّد لغة البحث والمصدر، ثم راجع خطة البحث وابدأ. Google Maps هو المصدر الافتراضي، وOpenStreetMap عبر Overpass خيار إضافي.
-5. تابع حالة الأهداف والخلايا، وراجع النتائج على الخريطة وفي الجدول، ثم صدّر السجلات المتاحة للتصدير.
-
-اختيار «مطاعم» يبدأ بحثًا عامًا؛ اختيار نوع مثل «مطعم بيتزا» يخصص البحث. البحث العام يقلل عدد الاستعلامات، ولا يضمن حصر جميع الأنواع أو الأماكن.
+5. تابع حالة الأهداف والخلايا ومؤشرات التشخيص، وراجع النتائج على الخريطة وفي الجدول، ثم صدّر السجلات المتاحة للتصدير.
 
 ## الخريطة والبيانات
 
@@ -65,7 +61,7 @@
 
 راجعت النسخة الحالية [Google Places Types (New)](https://developers.google.com/maps/documentation/places/web-service/place-types) بتاريخ **14 نوفمبر 2026**: **478 نوعًا قابلًا للاختيار و36 نوعًا إضافيًا للردود**. هذه المراجعة تخص قائمة Places المنشورة؛ تصنيفات Google Business Profile لها قائمة منفصلة مرتبطة بالبلد واللغة والتفويض.
 
-تختلف حقوق تخزين بيانات الأماكن وإعادة استخدامها وتصديرها بحسب المصدر. اكتمال تنفيذ المهمة لا يعني اكتمال بيانات الواقع. راجع [المصادر والتراخيص](<DALIL Chrome Exstension/docs/DEPENDENCIES.md>) و[أدلة التحديث وحدوده](<DALIL Chrome Exstension/docs/QUICK_LIBRARY_R6.md>).
+تختلف حقوق تخزين بيانات الأماكن وإعادة استخدامها وتصديرها بحسب المصدر. اكتمال تنفيذ المهمة لا يعني اكتمال بيانات الواقع. راجع [المصادر والتراخيص](<DALIL Chrome Exstension/docs/DEPENDENCIES.md>) و[موثوقية المسح والتشخيص](<DALIL Chrome Exstension/docs/SURVEY_RELIABILITY.md>).
 
 ## التحقق والتطوير
 
@@ -78,17 +74,18 @@ node test/test_comprehensive_audit.js
 node tools/project-hygiene.js
 ```
 
-تشمل الاختبارات سلامة المصدر، وهندسة الشبكة وملكية الخلايا، والتصدير، واللغات، والنص الحر، والتصنيفات والرموز. اختبارات المتصفح تحتاج Playwright وChromium منفصلين وتستخدم ملف مستخدم معزولًا وصفحات مصدر تجريبية. [تعليمات الاختبار](<DALIL Chrome Exstension/README.md#الاختبارات>) · [أدلة R6](<DALIL Chrome Exstension/docs/evidence/quick-library-r6-acceptance.json>).
+تشمل الاختبارات سلامة المصدر، وهندسة الشبكة وملكية الخلايا، والتصدير، واللغات، والنص الحر، والتصنيفات والرموز. اختبارات المتصفح تحتاج Playwright وChromium منفصلين وتستخدم ملف مستخدم معزولًا وصفحات مصدر تجريبية. [تعليمات الاختبار](<DALIL Chrome Exstension/README.md#الاختبارات>) · [أدلة موثوقية المسح](<DALIL Chrome Exstension/docs/evidence/survey-reliability-2026-11-14.json>).
 
 ## الوثائق والمساهمة
 
 | الدليل | المحتوى |
 | --- | --- |
 | [الاستخدام والتطوير](<DALIL Chrome Exstension/README.md>) | خطوات التشغيل، صيغ الإخراج وإعداد اختبارات المتصفح. |
-| [المكتبة السريعة R6](<DALIL Chrome Exstension/docs/QUICK_LIBRARY_R6.md>) | السلوك، تدقيق أنواع Google وأدلة التحقق والقيود. |
+| [موثوقية المسح والتشخيص](<DALIL Chrome Exstension/docs/SURVEY_RELIABILITY.md>) | معالجة حالات الصفر، حراس الكاميرا، إثبات التغطية، وأدلة الاختبارات الميدانية. |
+| [تقرير التشخيص الشامل](<DALIL Chrome Exstension/docs/DALIL_DIAGNOSTIC_REPORT_2026-11-14.md>) | تحليل معماري شامل لمسارات البحث واستخراج البطاقات والإسناد الهندسي. |
 | [اللغات والرموز R5](<DALIL Chrome Exstension/docs/LANGUAGES_SYMBOLS_R5.md>) | فصل اللغات، مصطلحات البحث والأصول المحلية للرموز. |
 | [استيراد الطرق والنقاط](<DALIL Chrome Exstension/docs/IMPORT_GEOMETRY_R3.md>) | هندسة نطاق الدراسة ومسافات البحث. |
-| [حالة التنفيذ](<DALIL Chrome Exstension/docs/IMPLEMENTATION_STATUS.md>) | تفاصيل المراحل السابقة وما لم يُختبر أو يُنفذ بعد. |
+| [حالة التنفيذ](<DALIL Chrome Exstension/docs/IMPLEMENTATION_STATUS.md>) | تفاصيل المراحل والتحديثات المنفذة. |
 | [الموارد والتراخيص](<DALIL Chrome Exstension/docs/DEPENDENCIES.md>) | مصادر المكتبات والرموز وشروط البيانات. |
 
 للمساهمة، راجع [CONTRIBUTING](<DALIL Chrome Exstension/CONTRIBUTING.md>). للإبلاغ عن مشكلة، اذكر النسخة والمتصفح واللغة وخطوات إعادة الإنتاج، واستخدم مثالًا صغيرًا دون بيانات خاصة. للإبلاغ الأمني، راجع [SECURITY](<DALIL Chrome Exstension/SECURITY.md>).
@@ -101,6 +98,6 @@ node tools/project-hygiene.js
 
 **DALIL — Discovery and Acquisition of Location Information & Listings** is an open-source Manifest V3 Chrome extension for grid-based place discovery, map/table review, and permitted Excel/GIS exports.
 
-Version **2.1.0** adds 38 broad quick-search choices, a detailed picker covering all 478 published selectable Google Places types, literal free-text queries, source-first result classifications, and a collapsible result legend outside the map. Search language is independent of the Arabic/English interface. Missing category translations require a user-supplied term or an explicitly enabled English fallback.
+Version **2.1.0** features high-reliability spatial surveying on Google Maps: in-cell first card harvesting, adaptive viewport zoom coverage calculation, explicit zero-result live diagnostics, resilient camera guard handling, a detailed 940-category taxonomy covering all 478 published Google Places types, literal verbatim multi-lingual free-text search, and collapsible symbology outside the map area. Search language operates independently from the Arabic/English UI.
 
 Load the inner **`DALIL Chrome Exstension`** directory through **`chrome://extensions` → Developer mode → Load unpacked**, then open DALIL from its toolbar icon. Runtime libraries are bundled locally. Supported exports are XLSX, CSV, GeoJSON, JSON, KML, KMZ, and point Shapefile, subject to recorded source rights. Broad searches and completed jobs do not guarantee exhaustive real-world coverage; browser evidence uses controlled fixtures.

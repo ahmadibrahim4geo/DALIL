@@ -116,6 +116,9 @@ document.addEventListener("DOMContentLoaded", () => {
       lgActive: "جاري المسح",
       lgDone: "مكتملة",
       lgEmpty: "خالية",
+      lgError: "خطأ / تعذر البحث",
+      CAMERA_NOT_AT_CELL: "توقف البحث مؤقتًا: صفحة الخلية لم تتمركز فوق الخلية حتى بعد إعادة تحميلها مرة واحدة، فلا تُقرأ نتائج حيٍّ آخر. راجع تبويب المصدر ثم استأنف.",
+      STALE_DOCUMENT: "توقف البحث مؤقتًا: الصفحة المعروضة هي صفحة سابقة لم تُستبدل. استأنف لإعادة فتح صفحة الخلية من جديد.",
       lgMarker: "معلم",
       mapProvider: "خرائط Google",
 
@@ -192,6 +195,8 @@ document.addEventListener("DOMContentLoaded", () => {
       optAccumulateDesc: "إضافة نتائج جديدة فوق السابقة مع تجنّب التكرار بدل مسح السجل.",
       optAutoDedup: "حذف التكرار المكاني التلقائي",
       optAutoDedupDesc: "مقارنة الإحداثيات واسم المنشأة وحذف التكرارات الناتجة عن تداخل الخلايا.",
+      optDeepRefine: "تحسين عميق عند نقص النتائج",
+      optDeepRefineDesc: "يقسّم الخلية إلى أربعة مشاهدات إضافية عند توقف التمرير أو نتيجة غير مؤكدة. يضاعف زمن المسح تقريباً.",
       optAutoPan: "ملاحقة الكاميرا للمربع الجاري فحصه",
       optAutoPanDesc: "توسيط الخريطة تلقائياً فوق المربع النشط أثناء المسح.",
       optZoomActive: "تكبير الخريطة على المربع النشط",
@@ -286,6 +291,9 @@ document.addEventListener("DOMContentLoaded", () => {
       lgActive: "Scanning",
       lgDone: "Completed",
       lgEmpty: "Empty",
+      lgError: "Error / unavailable",
+      CAMERA_NOT_AT_CELL: "Search paused: the cell page did not centre on the cell even after one clean reload, so another neighbourhood's results are not read. Check the source tab and resume.",
+      STALE_DOCUMENT: "Search paused: the page on screen is the previous one and was not replaced. Resume to reopen the cell page.",
       lgMarker: "POI",
       mapProvider: "OpenStreetMap",
 
@@ -362,6 +370,8 @@ document.addEventListener("DOMContentLoaded", () => {
       optAccumulateDesc: "Append new results on top of existing ones while avoiding duplicates.",
       optAutoDedup: "Automatic spatial deduplication",
       optAutoDedupDesc: "Compares coordinates and place names to drop duplicates caused by overlapping cells.",
+      optDeepRefine: "Deep refinement when results look incomplete",
+      optDeepRefineDesc: "Splits the cell into four extra views when scrolling stalls or the result is unconfirmed. Roughly doubles scanning time.",
       optAutoPan: "Follow the active cell with the camera",
       optAutoPanDesc: "Automatically centers the map over the cell being scanned.",
       optZoomActive: "Zoom the map to the active cell",
@@ -405,14 +415,15 @@ document.addEventListener("DOMContentLoaded", () => {
   function t(key) { return (I18N_DICT[currentLang] || I18N_DICT.ar)[key] || key; }
   function localizeCategory(value, branchId) { if(value?.kind==="free_text")return value.text;return typeof TaxonomyEngine !== "undefined" && TaxonomyEngine.getLocalizedLeaf ? TaxonomyEngine.getLocalizedLeaf(value, currentLang, branchId) : value; }
   function targetKey(value){return TaxonomyEngine.selectionKey?TaxonomyEngine.selectionKey(value):String(value);}
+  // معرّفات «المكتبة السريعة» القديمة لم تعد موجودة. تُسقط عند القراءة بدل عرضها
+  // كفئة بلا ترجمة، حتى لا يتعطّل بدء المسح بسبب اختيار محفوظ من إصدار سابق.
+  function isRetiredSelection(value){return typeof value==="string"&&value.indexOf("quick:")===0;}
   function symbolInput(value){
-    const quick=TaxonomyEngine.getQuickCategory?.(value);
-    if(quick)return quick.canonicalId?{categoryId:quick.canonicalId}:{category:quick.terms.en[0]};
     if(value?.kind==="free_text")return {searchKeyword:value.text,queryCategoryId:TaxonomyEngine.resolveSearchHint?.(value.text)?.canonicalId};
     return typeof value==="string"?{categoryId:value,category:value}:value;
   }
   function getSearchLocale(){const input=document.getElementById("searchLocale");return SearchLanguages.normalizeLocale(input?.value==="__custom__"?document.getElementById("customSearchLocale")?.value:input?.value||"ar");}
-  function buildUiQueryPlan(targets=targetPhenomena){const locale=getSearchLocale();return TaxonomyEngine.buildQueryPlan({selectedLeaves:targets,searchLanguage:locale,uiLanguage:currentLang,provider:document.getElementById("dataSource")?.value||"google_maps_dom",mode:selectQueryPlanMode?.value||"comprehensive",bilingualEnabled:['ar','en'].includes(SearchLanguages.localeInfo(locale).language)&&!!sideBilingualToggle?.checked,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?'en':null});}
+  function buildUiQueryPlan(targets=targetPhenomena){const locale=getSearchLocale();return TaxonomyEngine.buildQueryPlan({selectedLeaves:targets,searchLanguage:locale,uiLanguage:currentLang,provider:document.getElementById("dataSource")?.value||"google_maps_dom",mode:selectQueryPlanMode?.value||"balanced",bilingualEnabled:['ar','en'].includes(SearchLanguages.localeInfo(locale).language)&&!!sideBilingualToggle?.checked,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?'en':null});}
   function renderSearchLanguageChoices(locale=null){
     if(typeof SearchLanguages==="undefined")return;
     const select=document.getElementById("searchLocale");if(!select)return;
@@ -445,7 +456,7 @@ document.addEventListener("DOMContentLoaded", () => {
       panel.classList.toggle('hidden',!unique.size);list.innerHTML='';
       for(const missing of [...unique.values()].slice(0,40)){
         const id=missing.selectionId||missing.canonicalId,label=document.createElement('label');label.className='query-term-row';
-        const text=document.createElement('span');text.textContent=localizeCategory(TaxonomyEngine.getQuickCategory?.(id)?id:missing.canonicalId||id)+' · '+missing.locale;
+        const text=document.createElement('span');text.textContent=localizeCategory(missing.canonicalId||id)+' · '+missing.locale;
         const input=document.createElement('input');input.type='text';input.className='input query-term-override';input.dir='auto';input.maxLength=1000;input.dataset.selectionId=id;input.dataset.locale=missing.locale;input.setAttribute('aria-label',text.textContent);label.appendChild(text);label.appendChild(input);list.appendChild(label);
       }
       if(unique.size>40){const text=document.createElement('p');text.textContent=t('translationBatchHint');list.appendChild(text);}
@@ -581,10 +592,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTaxonomyTree();
     renderPhenomenaChips();
     renderSearchLanguageChoices();updateQueryReview();
-    document.querySelectorAll(".suggest-chip").forEach(button=>{
-      const old=button.querySelector(".tax-symbol");if(old)old.remove();
-      button.insertAdjacentHTML("afterbegin",categorySymbolHtml(button.getAttribute("data-phenom")));
-    });
     if (allResults) {
       renderPhenomenaTabs();
       renderTable(allResults);
@@ -809,7 +816,7 @@ document.addEventListener("DOMContentLoaded", () => {
         connectKeepalivePort();
       }
     } catch (e) {}
-  }, 25000);
+  }, 10000);
 
   // 6. ربط أحداث عناصر التحكم
   setupTabNavigation();
@@ -961,23 +968,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // ربط النقر على المقترحات السريعة
-    const suggestedPhenomChips = document.getElementById("suggestedPhenomChips");
-    document.getElementById("btnQuickLibraryMore")?.addEventListener("click", () => {
-      const expanded=suggestedPhenomChips.classList.toggle("is-expanded");
-      const button=document.getElementById("btnQuickLibraryMore");button.setAttribute("aria-expanded",String(expanded));
-      button.textContent=t(expanded?"quickShowLess":"quickShowMore");
-    });
-    if (suggestedPhenomChips) {
-      suggestedPhenomChips.addEventListener("click", (e) => {
-        const chip = e.target.closest(".suggest-chip");
-        if (!chip) return;
-        const phenom = chip.getAttribute("data-phenom");
-        if (phenom) {
-          addPhenomenon(phenom);
-        }
-      });
-    }
   }
 
   function setupRailNav() {
@@ -1399,6 +1389,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function addPhenomenon(name) {
     name=TaxonomyEngine.selectionId(name);
+    if (isRetiredSelection(name)) return;
     if (targetPhenomena.some((p) => targetKey(p) === targetKey(name))) {
       return;
     }
@@ -1465,18 +1456,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function renderQuickLibrary() {
-    const container=document.getElementById("suggestedPhenomChips");if(!container)return;
-    container.innerHTML=TaxonomyEngine.getQuickCategories().map(p=>{
-      const selected=targetPhenomena.includes(p.id);
-      return '<button type="button" class="suggest-chip'+(selected?' selected':'')+'" data-phenom="'+escapeAttr(p.id)+'" aria-pressed="'+selected+'">'+categorySymbolHtml(p.id)+'<span>'+escapeHtml(p.labels[currentLang]||p.labels.en)+'</span></button>';
-    }).join('');
-    const button=document.getElementById("btnQuickLibraryMore");
-    if(button)button.textContent=t(container.classList.contains("is-expanded")?"quickShowLess":"quickShowMore");
-  }
-
   function renderPhenomenaChips() {
-    renderQuickLibrary();
     activePhenomenaContainer.innerHTML = "";
     activePhenomenaCount.textContent = targetPhenomena.length;
     if (navPhenomCount) navPhenomCount.textContent = targetPhenomena.length;
@@ -1557,7 +1537,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.get(["workspaceState", "savedStudyArea", "savedCells", "savedPhenomena","searchLanguageSettings"], items => {
       if (!items) return;
       if(items.searchLanguageSettings){const settings=items.searchLanguageSettings;queryTermOverrides=settings.queryTerms||{};renderSearchLanguageChoices(settings.locale||'ar');document.getElementById('allowEnglishSearchFallback').checked=!!settings.fallback;}
-      if (Array.isArray(items.savedPhenomena)) targetPhenomena = [...new Map(items.savedPhenomena.map(value=>{const normalized=TaxonomyEngine.selectionId(value);return[targetKey(normalized),normalized];})).values()];
+      if (Array.isArray(items.savedPhenomena)) targetPhenomena = [...new Map(items.savedPhenomena.filter(value=>!isRetiredSelection(value)).map(value=>{const normalized=TaxonomyEngine.selectionId(value);return[targetKey(normalized),normalized];})).values()];
       if (typeof WorkspaceState !== "undefined") applyWorkspaceSnapshot(WorkspaceState.fromStorage(items));
       renderPhenomenaChips();
       renderTaxonomyTree();
@@ -1765,6 +1745,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if(drawLayerGroup)drawLayerGroup.clearLayers();
       document.getElementById("drawSessionActions")?.classList.remove("hidden");
       isDrawingPolygon = true;
+      setDrawingSelection('btnDrawPolygon');
+      map.dragging?.disable();
+      if(cellsLayerGroup)cellsLayerGroup.clearLayers();
       map.getContainer?.()?.classList?.add("dalil-drawing");
       polygonVertices = [];
       if (map.doubleClickZoom) map.doubleClickZoom.disable();
@@ -1796,11 +1779,18 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("keydown", event => { if (event.key === "Escape") {resetDrawingModes();restoreAreaLayers();} });
   }
 
-  function renderPolygonDraft() {
-    if (!drawLayerGroup || polygonVertices.length < 2) return;
-    drawLayerGroup.clearLayers();
-    const draft = polygonVertices.length >= 3 ? L.polygon(polygonVertices, { color: "#38bdf8", fillOpacity: 0.08 }) : L.polyline(polygonVertices, { color: "#38bdf8" });
-    drawLayerGroup.addLayer(draft);
+  function renderPolygonDraft(cursor=null) {
+    if (!drawLayerGroup || !polygonVertices.length) return;
+    const points=cursor?[...polygonVertices,[cursor.lat,cursor.lng]]:polygonVertices;
+    if(!tempDrawLayer)tempDrawLayer=L.polygon(points,{color:'#06b6d4',weight:4,fillOpacity:0.08,interactive:false}).addTo(drawLayerGroup);
+    else tempDrawLayer.setLatLngs(points);
+  }
+
+  function setDrawingSelection(id=null){
+    for(const tool of ['btnStartDrawRect','btnDrawPolygon','btnEditArea']){
+      const button=document.getElementById(tool);if(!button)continue;
+      button.classList.toggle('active',id===tool);button.setAttribute('aria-pressed',String(id===tool));
+    }
   }
 
   function finishPolygonDrawing() {
@@ -1826,6 +1816,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(viewportLock?.isLocked()){alert(t("unlockToDraw"));return;}
     resetDrawingModes();
     if (!editLayerGroup) editLayerGroup = L.layerGroup().addTo(map);
+    setDrawingSelection('btnEditArea');
     document.getElementById("drawSessionActions")?.classList.remove("hidden");
     const area = currentStudyArea;
     const geometry = JSON.parse(JSON.stringify(area.geometry));
@@ -1871,6 +1862,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(viewportLock?.isLocked()){alert(t("unlockToDraw"));return;}
     resetDrawingModes();
     isDrawingRect = true;
+    setDrawingSelection('btnStartDrawRect');
     map.getContainer?.()?.classList?.add("dalil-drawing");
 
     // هام جداً: لا نمسح studyAreaLayerGroup إطلاقاً!
@@ -1924,7 +1916,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("drawSessionActions")?.classList.add("hidden");
     rectStartCorner = null;
 
-    btnStartDrawRect.classList.remove("active");
+    setDrawingSelection();
     btnMapToolPan.classList.add("active");
 
     drawInstructionHint.textContent = t("drawHint");
@@ -1937,7 +1929,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function handleMapClickForDrawing(e) {
     if(Date.now()<ignoreDrawingClickUntil)return;
-    if (isDrawingPolygon) { polygonVertices.push([Number(e.latlng.lat.toFixed(6)), Number(e.latlng.lng.toFixed(6))]); renderPolygonDraft(); return; }
+    if (isDrawingPolygon) {
+      const point=[Number(e.latlng.lat.toFixed(6)),Number(e.latlng.lng.toFixed(6))],previous=polygonVertices[polygonVertices.length-1];
+      if(previous&&previous[0]===point[0]&&previous[1]===point[1])return;
+      polygonVertices.push(point);
+      L.circleMarker(point,{radius:4,color:'#fff',weight:2,fillColor:'#06b6d4',fillOpacity:1,interactive:false}).addTo(drawLayerGroup);
+      renderPolygonDraft();return;
+    }
     if (!isDrawingRect) return;
 
     const lat = Number(e.latlng.lat.toFixed(6));
@@ -1983,11 +1981,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function handleMapMouseMoveForDrawing(e) {
+    if(isDrawingPolygon){renderPolygonDraft(e.latlng);return;}
     if (isDrawingRect && rectStartCorner) {
       const currentCorner = [e.latlng.lat, e.latlng.lng];
       const bounds = [rectStartCorner, currentCorner];
       if (!tempDrawLayer) {
-        tempDrawLayer = L.rectangle(bounds, { color: "#38bdf8", weight: 2.5, dashArray: "5, 5", fillOpacity: 0.12 }).addTo(drawLayerGroup);
+        tempDrawLayer = L.rectangle(bounds, { color: "#06b6d4", weight: 4, dashArray: "10, 6", fillOpacity: 0.08,interactive:false }).addTo(drawLayerGroup);
       } else {
         tempDrawLayer.setBounds(bounds);
       }
@@ -1997,15 +1996,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderDrawnRectangle(bounds) {
     if (!drawLayerGroup || !bounds) return;
     drawLayerGroup.clearLayers();
-    const rect = drawnRectangle && drawnRectangle.geometry && drawnRectangle.type !== "BBox" ? L.polygon(SpatialUtils.geometryToLeafletPolygons(drawnRectangle.geometry), { color: "#38bdf8", weight: 2.5, fillOpacity: 0.05 }) : L.rectangle([
+    const rect = drawnRectangle && drawnRectangle.geometry && drawnRectangle.type !== "BBox" ? L.polygon(SpatialUtils.geometryToLeafletPolygons(drawnRectangle.geometry), { color: "#06b6d4", weight: 4,dashArray:"10, 6", fillOpacity: 0,interactive:false }) : L.rectangle([
       [bounds.minLat, bounds.minLng],
       [bounds.maxLat, bounds.maxLng]
     ], {
-      color: "#38bdf8",
-      weight: 2.5,
-      dashArray: "5, 5",
-      fillColor: "#38bdf8",
-      fillOpacity: 0.05
+      color: "#06b6d4",
+      weight: 4,
+      dashArray: "10, 6",
+      fillColor: "#06b6d4",
+      fillOpacity: 0,
+      interactive:false
     });
     rect.bindPopup("<strong>" + escapeHtml(t("drawRectangleLabel")) + "</strong>");
     drawLayerGroup.addLayer(rect);
@@ -2199,7 +2199,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let selectedLocale,uiPlan;
       try{selectedLocale=getSearchLocale();uiPlan=buildUiQueryPlan();}catch(error){alert(t("INVALID_LOCALE"));switchView("setup");return;}
       if(!uiPlan.executable){updateQueryReview();switchView("phenomena");document.getElementById("translationReviewPanel")?.scrollIntoView({block:"center"});alert(t("MISSING_QUERY_TRANSLATION"));return;}
-      const config={provider:(document.getElementById("dataSource")||{}).value||"google_maps_dom",searchLocale:selectedLocale,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?"en":null,uiLanguage:currentLang,areaVersion:workspaceRevision,query:targetPhenomena[0],queriesToRun:[...targetPhenomena],queryPlanMode:selectQueryPlanMode&&selectQueryPlanMode.value||"comprehensive",studyArea:currentStudyArea,bilingualEnabled:!sideBilingualToggle.disabled&&sideBilingualToggle.checked,clearPreviousData:!checkAccumulateData.checked,customCells:allCells,customBounds:currentStudyArea.bounds,zoom:settingZoomLevel.value==="auto"?"auto":parseInt(settingZoomLevel.value,10)||15,delayMs:parseInt(settingDelayMs.value,10)||1600,autoPan:checkAutoPanCamera.checked,zoomActive:checkZoomActiveCell.checked,autoDedup:checkAutoDedup.checked};
+      const config={provider:(document.getElementById("dataSource")||{}).value||"google_maps_dom",searchLocale:selectedLocale,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?"en":null,uiLanguage:currentLang,areaVersion:workspaceRevision,query:targetPhenomena[0],queriesToRun:[...targetPhenomena],queryPlanMode:selectQueryPlanMode&&selectQueryPlanMode.value||"balanced",studyArea:currentStudyArea,bilingualEnabled:!sideBilingualToggle.disabled&&sideBilingualToggle.checked,clearPreviousData:!checkAccumulateData.checked,customCells:allCells,customBounds:currentStudyArea.bounds,zoom:settingZoomLevel.value==="auto"?"auto":parseInt(settingZoomLevel.value,10)||16,delayMs:parseInt(settingDelayMs.value,10)||1200,autoPan:checkAutoPanCamera.checked,zoomActive:checkZoomActiveCell.checked,autoDedup:checkAutoDedup.checked,deepRefine:!!document.getElementById("checkDeepRefine")?.checked};
       btnTopStart.disabled=true;
       chrome.runtime.sendMessage({action:"START_SCRAPING",config},response=>{
         btnTopStart.disabled=false;
@@ -2231,6 +2231,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function showExportFailure(error){
+    const details=error?.details;
+    if(error?.code==='EXPORT_RESTRICTED'&&details){
+      alert(currentLang!=="en"
+        ? `التصدير متوقف: ${details.restricted} من ${details.total} سجلًا لا يمكن تصديرها لأن مصدرها (خرائط جوجل) لا يسمح بالاستخراج المجمّع.\nالسجلات القابلة للتصدير: ${details.exportable||0}.\n\nالحل: استخدم مصدر OpenStreetMap، أو استورد ملفًا تملك حقوق إعادة استخدامه.`
+        : `Export blocked: ${details.restricted} of ${details.total} records cannot be exported because their source (Google Maps) does not permit bulk extraction.\nExportable records: ${details.exportable||0}.\n\nUse OpenStreetMap, or import a file whose reuse rights you own.`);
+      return;
+    }
+    alert(error?.message||String(error));
+  }
+
   function setupExportButtons(){
     const controls=[
       ["btnExportKml","exportToKml"],["btnExportKmz","exportToKmz"],["btnExportExcel","exportToExcel"],["btnExportGeoJson","exportToGeoJson"],["btnExportJson","exportToJson"],["btnExportCsv","exportToCsv"],["btnExportShp","exportToShapefile"],
@@ -2238,7 +2249,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
     controls.forEach(([id,method,all])=>{const button=document.getElementById(id);if(button)button.addEventListener("click",async()=>{
       try{if(ExportUtils.setLanguage)ExportUtils.setLanguage(currentLang);await (ExportUtils.exportInWorker ? ExportUtils.exportInWorker(({exportToKml:"kml",exportToKmz:"kmz",exportToExcel:"xlsx",exportToGeoJson:"geojson",exportToJson:"json",exportToCsv:"csv",exportToShapefile:"shp"})[method],all?allResults:getFilteredResults(),"dalil_places_survey",null,{language:currentLang}) : ExportUtils[method](all?allResults:getFilteredResults(),"dalil_places_survey",null,{language:currentLang}));}
-      catch(error){alert(error.message);}
+      catch(error){showExportFailure(error);}
     });});
     if(btnExportSeparateKml)btnExportSeparateKml.addEventListener("click",()=>ExportUtils.exportSeparateFilesPerCategory(allResults,"kml","dalil_places_survey"));
   }
@@ -2276,20 +2287,50 @@ document.addEventListener("DOMContentLoaded", () => {
       if(grid&&grid.success&&Array.isArray(grid.cells)){allCells=grid.cells;updateMapGridStyles(allCells);}
       if(lastResultsRevision!==state.resultsRevision||resultsDirty){
         const records=[];let total=state.resultsCount||0;const revision=state.resultsRevision||0;
+        let changed=false;
         for(let offset=0;offset<total;offset+=1000){
           const page=await sendCommand({action:"GET_RESULTS_PAGE",offset,limit:1000,resultsRevision:revision});
-          if(!page||!page.success||page.resultsRevision!==revision){resultsDirty=true;return;}
+          if(!page||!page.success||page.resultsRevision!==revision){changed=true;break;}
           total=page.total;records.push(...page.results);
         }
-        allResults=records;lastResultsRevision=revision;
-        renderPhenomenaTabs();renderTable(allResults);renderMapMarkers(allResults);
-        lastProcessedCount=allResults.length;resultsDirty=false;
+        // أثناء مهمة نشطة يتغيّر revision باستمرار؛ كان الشرط السابق يُجمّد الجدول للأبد.
+        // نعرض الآن ما قُرئ بشكل متسق، ونُبقي الجلب مُعلَّقًا للدورة التالية.
+        if(records.length>0||!changed){
+          allResults=records;lastResultsRevision=changed?-1:revision;
+          renderPhenomenaTabs();renderTable(allResults);renderMapMarkers(allResults);
+          lastProcessedCount=allResults.length;resultsDirty=changed;
+        }else{
+          resultsDirty=true;
+        }
       }
       hudPlacesCount.textContent=allResults.length;hudDupCount.textContent=currentStats.duplicatesSkipped||0;hudCellsCount.textContent=allCells.length;
       cellsTotalPreviewBadge.textContent=cellCountLabel(allCells.length);tableRecordCount.textContent=allResults.length;
       const quick=document.getElementById("quickRecordsBadge");if(quick)quick.textContent=allResults.length;
       if(tabCountAll)tabCountAll.textContent=allResults.length;
       if(state.lastError||state.pauseReason){const detail=document.getElementById("liveProgressDetails");if(detail)detail.textContent=errorText({code:state.pauseReason||state.lastError?.code,error:state.lastError?.message});}
+      // تفسير صريح للنتيجة الصفرية: بدل أن يرى المستخدم «0» فقط.
+      const diagCard=document.getElementById("scanDiagnosisCard");
+      if(diagCard){
+        const diag=state.lastScanDiagnosis;
+        const errorCode=state.pauseReason||state.lastError?.code||null;
+        const diagText=diag&&diag.code&&diag.code!=="ITEMS_SAVED";
+        if(!errorCode&&!diagText)diagCard.classList.add("hidden");
+        else{
+          diagCard.classList.remove("hidden");
+          diagCard.setAttribute("data-severity",errorCode?"error":(diag.severity||"warn"));
+          const title=document.getElementById("scanDiagnosisTitle");
+          if(title)title.textContent=currentLang==="ar"?(errorCode?"لماذا توقّف الاستخراج؟":"لماذا لم يُحفظ سجل جديد؟"):(errorCode?"Why did extraction stop?":"Why was no new record saved?");
+          const text=document.getElementById("scanDiagnosisText");
+          if(text)text.textContent=errorCode?errorText({code:errorCode,error:state.lastError?.message}):(currentLang==="ar"?diag.messageAr:diag.messageEn);
+          const counts=document.getElementById("scanDiagnosisCounts");
+          if(counts){
+            const c=(diag&&diag.counts)||{};
+            counts.textContent=diagText
+              ?["cards="+(c.items||0),"inCell="+(c.inCellCount||0),"new="+(c.newCount||0),"dup="+(c.dupCount||0),"outside="+(c.outsideCount||0),"noXY="+(c.unlocatedCount||0),"otherCell="+(c.discoveredElsewhere||0),"cell="+(diag.cellId||"-"),"query="+(diag.query||"-")].join(" · ")
+              :"";
+          }
+        }
+      }
     } catch(error){console.warn("Dashboard refresh failed",error);}
     finally{fetchingResults=false;if(refreshQueued){refreshQueued=false;setTimeout(fetchData,0);}}
   }
@@ -2318,7 +2359,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if(railTitle)railTitle.textContent=label;
     if(railSub)railSub.textContent=completed+" / "+units;
     const title=document.getElementById("liveProgressTitle");if(title)title.textContent=currentCell?label+" · "+displayCellName(currentCell):label;
-    const details=document.getElementById("liveProgressDetails");if(details)details.textContent=localizeCategory(queryText||"")+" · "+(currentCell?displayCellName(currentCell)+" · ":"")+(currentLang==="ar"?"الظاهرة ":"Feature ")+Math.min((queryIdx||0)+1,totalQueries)+" / "+totalQueries+" · "+completed+" / "+units;
+    const detailStep=currentCell?.statusByQuery?.['Q'+((queryIdx||0)+1)];
+    const scans=detailStep?.scans||[],scanDone=scans.filter(scan=>scan.status!=='pending').length;
+    const details=document.getElementById("liveProgressDetails");if(details)details.textContent=localizeCategory(queryText||"")+" · "+(currentLang==="ar"?"الخلية ":"Cell ")+Math.min((cellIdx||0)+1,count)+" / "+count+" · "+(currentCell?displayCellName(currentCell)+" · ":"")+(currentLang==="ar"?"عبارة البحث ":"Search term ")+Math.min((queryIdx||0)+1,totalQueries)+" / "+totalQueries+" · "+completed+" / "+units+(scans.length>1?" · "+(currentLang==="ar"?"فحص تفصيلي ":"Detail scans ")+scanDone+" / "+scans.length:"");
     const eta=document.getElementById("noticeEtaLabel");if(eta){const duration=stats.startTime?Date.now()-stats.startTime:0;const seconds=completed>0?Math.round((duration/completed)*(units-completed)/1000):0;eta.textContent=seconds?Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0"):"—";}
     const overlay=document.getElementById("liveExtractionProgressCard");if(overlay)overlay.classList.toggle("hidden",!active&&!paused);
     if(currentCell){const position=allCells.findIndex(cell=>cell.id===currentCell.id);if(position>=0)allCells[position]={...allCells[position],...currentCell};}
@@ -2333,22 +2376,43 @@ document.addEventListener("DOMContentLoaded", () => {
   function getCellStyle(status){return DalilGridPresentation.style(status);}
   function renderGridLegend(){
     const legend=document.getElementById("gridStatusLegend");if(!legend)return;
-    legend.innerHTML=DalilGridPresentation.definitions.map(d=>'<span data-grid-status="'+d.id+'"><i style="background:'+d.color+'22;border:1.7px '+(d.dash?'dashed':'solid')+' '+d.color+'"></i><span>'+escapeHtml(t(d.label))+'</span></span>').join("");
+    const defs=DalilGridPresentation.definitions;
+    legend.innerHTML=defs.map(d=>'<span data-grid-status="'+d.id+'"><i style="background:'+d.color+'22;border:1.7px '+(d.dash?'dashed':'solid')+' '+d.color+'"></i><span>'+escapeHtml(t(d.label))+'</span></span>').join("");
   }
   function cellPopup(cell){
-    const states={pending:currentLang==="ar"?"بانتظار الفحص":"Pending",processing:t("statusRunning"),running:t("statusRunning"),done:currentLang==="ar"?"تم الفحص":"Surveyed",complete:currentLang==="ar"?"تم الفحص":"Surveyed",verified_empty:currentLang==="ar"?"لا نتائج وفق دليل المصدر":"No results: provider evidence",confirmed_empty:currentLang==="ar"?"لا نتائج وفق دليل المصدر":"No results: provider evidence",partial:currentLang==="ar"?"نتائج جزئية":"Partial",capped:currentLang==="ar"?"حد النتائج":"Capped",unknown:currentLang==="ar"?"غير محسوم":"Unknown",error:currentLang==="ar"?"خطأ":"Error",blocked:currentLang==="ar"?"حظر المصدر":"Provider blocked"};
     const status=gridCellState(cell);
-    return '<strong>'+escapeHtml(displayCellName(cell))+'</strong><br>'+escapeHtml(states[status]||status)+'<br>'+escapeHtml(t("hudPlaces"))+' '+Number(cell.itemsFound||0);
+    const count=Number(cell.itemsFound||0);
+    const states={
+      pending:currentLang==="ar"?"بانتظار الفحص":"Pending",
+      processing:t("statusRunning"),
+      running:t("statusRunning"),
+      done:currentLang==="ar"?(count>0?"مكتملة":"خالية"):(count>0?"Completed":"Empty"),
+      complete:currentLang==="ar"?(count>0?"مكتملة":"خالية"):(count>0?"Completed":"Empty"),
+      verified_empty:currentLang==="ar"?"خالية":"Empty",
+      confirmed_empty:currentLang==="ar"?"خالية":"Empty",
+      partial:currentLang==="ar"?(count>0?"مكتملة · بيانات جزئية":"مكتملة · جزئية بلا نتائج"):(count>0?"Completed · partial data":"Completed · partial, no results"),
+      capped:currentLang==="ar"?"مكتملة · بلغت حد النتائج":"Completed · result cap reached",
+      unknown:currentLang==="ar"?"تعذر التحقق (لم تُقرأ بطاقات)":"Unverified (no cards read)",
+      coverage_incomplete:currentLang==="ar"?
+        "غير مكتملة · تغطية ناقصة: عرض الخريطة كان أصغر من الخلية فبقيت معالم داخلها بلا قراءة":
+        "Not complete · partial coverage: the map viewport was smaller than the cell, so places inside it were not read",
+      error:currentLang==="ar"?"خطأ":"Error",
+      blocked:currentLang==="ar"?"حظر المصدر":"Provider blocked"
+    };
+    return '<strong>'+escapeHtml(displayCellName(cell))+'</strong><br>'+escapeHtml(states[status]||status)+'<br>'+escapeHtml(t("hudPlaces"))+' '+count;
   }
   function renderMapGrid(cells){
     if(!cellsLayerGroup)return;
+    const quickGrid=document.getElementById('quickGridBadge');if(quickGrid)quickGrid.textContent=cellCountLabel(cells.length);
     cellsLayerGroup.clearLayers();cellLayersMap.clear();lastCellsCount=cells.length;
     renderGridLegend();
     if(mapCellsFoot)mapCellsFoot.textContent=cellCountLabel(cells.length);
     cells.forEach(cell=>{const b=cell.bounds||cell;if(!b||![b.minLat,b.maxLat,b.minLng,b.maxLng].every(Number.isFinite))return;const layer=L.rectangle([[b.minLat,b.minLng],[b.maxLat,b.maxLng]],getCellStyle(gridCellState(cell)));layer.bindPopup(cellPopup(cell));layer.on("click",()=>{tableFilterInput.value=cell.id;currentPage=1;renderTable(allResults);});cellsLayerGroup.addLayer(layer);cellLayersMap.set(cell.id,layer);const el=layer.getElement?.();if(el){el.dataset.cellId=cell.id;el.dataset.gridStatus=gridCellState(cell);}});
+    drawLayerGroup?.eachLayer?.(layer=>layer.bringToFront?.());
     refreshMarkerScope(cells);
   }
   function updateMapGridStyles(cells){
+    const quickGrid=document.getElementById('quickGridBadge');if(quickGrid)quickGrid.textContent=cellCountLabel(cells.length);
     if(cells.length!==lastCellsCount){renderMapGrid(cells);return;}
     cells.forEach(cell=>{const layer=cellLayersMap.get(cell.id);if(layer){if(layer.setStyle)layer.setStyle(getCellStyle(gridCellState(cell)));if(layer.setPopupContent)layer.setPopupContent(cellPopup(cell));const el=layer.getElement?.();if(el)el.dataset.gridStatus=gridCellState(cell);}});
     refreshMarkerScope(cells);

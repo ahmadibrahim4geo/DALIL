@@ -2267,7 +2267,7 @@
 
   const MULTILINGUAL_ALIASES = {
     mosque: { ar: ['مسجد', 'مساجد', 'جامع', 'جوامع'], en: ['mosques', 'masjid'], fr: ['mosquée', 'mosquées'], es: ['mezquita'], pt: ['mesquita'], hi: ['मस्जिद'], zh: ['清真寺'], ja: ['モスク'] },
-    school: { ar: ['مدرسة', 'مدارس'], en: ['schools'], fr: ['école', 'écoles'], es: ['escuela'], pt: ['escola'], hi: ['विद्यालय', 'स्कूल'], zh: ['学校'], ja: ['学校'] },
+    school: { ar: ['مدرسة', 'مدارس', 'الفصل الواحد', 'مدارس الفصل الواحد', 'مدرسة الفصل الواحد', 'مدارس مجتمعية'], en: ['schools', 'one-classroom schools', 'community schools'], fr: ['école', 'écoles'], es: ['escuela'], pt: ['escola'], hi: ['विद्यालय', 'स्कूल'], zh: ['学校'], ja: ['学校'] },
     hospital: { ar: ['مستشفى', 'مستشفيات'], en: ['hospitals'], fr: ['hôpital'], es: ['hospitales'], pt: ['hospitais'], hi: ['अस्पताल'], zh: ['医院'], ja: ['病院'] },
     medical_clinic: { ar: ['عيادة', 'عيادات'], en: ['clinic', 'clinics'], fr: ['clinique'], es: ['clínica'], pt: ['clínica'] },
     pharmacy: { ar: ['صيدلية', 'صيدليات'], en: ['pharmacies'], fr: ['pharmacie'], es: ['farmacia'], pt: ['farmácia'], hi: ['दवा की दुकान'], zh: ['药店'], ja: ['薬局'] },

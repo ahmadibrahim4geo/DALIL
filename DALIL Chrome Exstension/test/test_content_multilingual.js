@@ -114,6 +114,10 @@ for(const row of locales){
   doc.body.innerText='Unknown/loading message';assert.equal(api.hasExplicitNoResults(),false);
   doc.body.innerText=row.empty;doc.querySelectorAll=()=>[link];assert.equal(api.hasExplicitNoResults(),false,'Cards prevent a verified empty classification');
   const button=element(row.search);doc.querySelectorAll=()=>[button];assert.equal(api.clickSearchThisAreaIfPresent(),true);assert.equal(button.clicked,true);
+  button.clicked=false;assert.equal(api.clickSearchThisAreaIfPresent(),false);assert.equal(button.clicked,false,'A task never refreshes the search area repeatedly');
+  doc.body.innerText='تظهر لك طريقة عرض محدودة من خرائط Google';assert.equal(api.hasLimitedView(),true);
+  doc.body.innerText="You're seeing a limited view of Google Maps";assert.equal(api.hasLimitedView(),true);
+  doc.body.innerText=row.name;assert.equal(api.hasLimitedView(),false);
 }
 const approximate=fixture(locales[1],{approximate:true}).api.extractPlacesFromFeed({querySelectorAll(){return [];}});
 assert.deepEqual(Array.from(approximate),[]);
@@ -123,6 +127,10 @@ assert.equal(approx.reviewsCount,'');assert.equal(approx.reviewsCountRaw,'(1.2K)
 const cameraFixture=fixture(locales[6],{camera:true});
 const unlocated=cameraFixture.api.extractPlacesFromFeed({querySelectorAll:()=>[cameraFixture.link]},null)[0];
 assert.equal(unlocated.hasExactCoords,false);assert.equal(unlocated.x,null);assert.equal(unlocated.y,null);
+cameraFixture.card.getAttribute=key=>key==='data-url'?'https://www.google.com/maps/place/Test/data=!3d30.125!4d31.25':null;
+const upgraded=cameraFixture.api.extractPlacesFromFeed({querySelectorAll:()=>[cameraFixture.link]},null)[0];
+assert.equal(upgraded.hasExactCoords,true,'A camera URL must not prevent checking an exact card data-url');
+assert.equal(upgraded.x,31.25);assert.equal(upgraded.y,30.125);
 const malformedRating=element('Not provided');
 const malformedMetrics=Content.extractRatingMetrics({querySelector:selector=>selector==='span.MW4etd'?malformedRating:null,querySelectorAll:()=>[]});
 assert.equal(malformedMetrics.rating,'');assert.equal(malformedMetrics.ratingRaw,'Not provided','Unparseable observed numbers retain source evidence without inventing a value');
@@ -141,7 +149,7 @@ async function checkScroll(row,insidePlace=false,unknown=false){
   const {api,doc,card}=fixture(row);
   const marker=element(unknown?'Unrecognized source wording':row.end);marker.closest=()=>insidePlace?card:null;
   doc.querySelector=()=>null;doc.querySelectorAll=()=>[];
-  const feed={scrollHeight:100,scrollTop:0,dispatchEvent(){},querySelector:()=>marker,querySelectorAll:()=>[]};
+  const feed={scrollHeight:100,scrollTop:0,dispatchEvent(){},querySelector:()=>marker,querySelectorAll:selector=>selector.startsWith('span.HlvSq')?[marker]:[]};
   return api.smartAutoScrollFeed(feed,120,0,null,()=>1);
 }
 Promise.all(locales.map(async row=>assert.equal(await checkScroll(row),'complete',row.locale+' translated feed end marker')))

@@ -1,9 +1,10 @@
-/* Real native Chrome extension journeys. Provider HTML is a synthetic fixture. */
+/* Real native Chrome extension journeys. Provider HTML is a synthetic fixture.
+ * Small search cells isolate query-first order; test_survey_browser covers refinement. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.DALIL_PLAYWRIGHT_MODULE||'playwright');
 const Export=require('../lib/export-utils');
 const out=process.env.DALIL_BROWSER_EVIDENCE_DIR;if(!out)throw Error('Set DALIL_BROWSER_EVIDENCE_DIR');fs.mkdirSync(out,{recursive:true});
-function polygonShp(){const b=Buffer.alloc(236);b.writeInt32BE(9994,0);b.writeInt32BE(118,24);b.writeInt32LE(1000,28);b.writeInt32LE(5,32);[31,30,31.1,30.1].forEach((n,i)=>b.writeDoubleLE(n,36+i*8));b.writeInt32BE(1,100);b.writeInt32BE(64,104);b.writeInt32LE(5,108);[31,30,31.1,30.1].forEach((n,i)=>b.writeDoubleLE(n,112+i*8));b.writeInt32LE(1,144);b.writeInt32LE(5,148);b.writeInt32LE(0,152);[[31,30],[31.1,30],[31.1,30.1],[31,30.1],[31,30]].forEach((p,i)=>{b.writeDoubleLE(p[0],156+i*16);b.writeDoubleLE(p[1],164+i*16);});return b;}
+function polygonShp(){const b=Buffer.alloc(236);b.writeInt32BE(9994,0);b.writeInt32BE(118,24);b.writeInt32LE(1000,28);b.writeInt32LE(5,32);[31,30,31.01,30.01].forEach((n,i)=>b.writeDoubleLE(n,36+i*8));b.writeInt32BE(1,100);b.writeInt32BE(64,104);b.writeInt32LE(5,108);[31,30,31.01,30.01].forEach((n,i)=>b.writeDoubleLE(n,112+i*8));b.writeInt32LE(1,144);b.writeInt32LE(5,148);b.writeInt32LE(0,152);[[31,30],[31.01,30],[31.01,30.01],[31,30.01],[31,30]].forEach((p,i)=>{b.writeDoubleLE(p[0],156+i*16);b.writeDoubleLE(p[1],164+i*16);});return b;}
 (async()=>{
  const extension=path.resolve(__dirname,'..'),errors=[],alerts=[],searches=[];
  const context=await chromium.launchPersistentContext(path.join(out,'profile-'+Date.now()),{channel:'chromium',headless:true,viewport:{width:1500,height:1000},args:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`]});
@@ -45,7 +46,7 @@ function polygonShp(){const b=Buffer.alloc(236);b.writeInt32BE(9994,0);b.writeIn
   const polygonRevision=(await state()).workspace.revision;await page.locator('#btnFinishDrawing').click();await waitRevision(polygonRevision).catch(async error=>{fs.writeFileSync(path.join(out,'polygon-failure.json'),JSON.stringify({polygonClicks,canvas,alerts,state:await state(),hint:await page.locator('#drawInstructionHint').textContent()},null,2));await page.screenshot({path:path.join(out,'polygon-failure.png'),fullPage:true});throw error;});s=(await state()).workspace;assert.equal(s.drawnStudyArea.geometry.type,'Polygon');assert.equal(s.drawnStudyArea.geometry.coordinates[0].length,4,JSON.stringify(s.drawnStudyArea.geometry));
   await page.locator('#btnDrawPolygon').click();await page.mouse.click(canvas.x+210,canvas.y+210);await page.locator('#btnCancelDrawing').click();assert.deepEqual((await state()).workspace.drawnStudyArea.geometry,s.drawnStudyArea.geometry);
   await page.locator('#btnDrawPolygon').click();await page.keyboard.press('Escape');assert.equal(await page.locator('#drawSessionActions').isVisible(),false);
-  const coords=[[31,30],[31.1,30],[31.1,30.1],[31,30.1],[31,30]];
+  const coords=[[31,30],[31.01,30],[31.01,30.01],[31,30.01],[31,30]];
   const kml=`<kml><Document><Placemark><Polygon><outerBoundaryIs><LinearRing><coordinates>${coords.map(p=>p.join(',')).join(' ')}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark></Document></kml>`;
   const shapes=polygonShp();
   const files=[['boundary.kml',Buffer.from(kml)],['boundary.kmz',Buffer.from(Export.createZip([{name:'doc.kml',data:kml}]))],['boundary.geojson',Buffer.from(JSON.stringify({type:'Polygon',coordinates:[coords]}))],['boundary.shp',shapes],['boundary.zip',Buffer.from(Export.createZip([{name:'area.shp',data:shapes}]))]];

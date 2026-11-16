@@ -33,6 +33,16 @@ const mockResponse=data=>({ok:true,status:200,headers:{get:()=>null},text:async(
   assert.strictEqual(index.find(Records.normalize({id:'2',place_id:'branch2',name:'Cafe',x:31,y:30,hasExactCoords:true},{provider:'osm_overpass'})),-1);
   assert.strictEqual(index.find({...list[0],id:'different',name:'مقهى'}),0);
   assert.strictEqual(index.find({...list[0],provider:'other'}),-1);
+  const venueA={provider:'osm_overpass',id:'a',name:'Mall',x:31,y:30,hasExactCoords:true,address:'1 First St'};
+  const venueB={provider:'osm_overpass',id:'b',name:'Mall',x:31,y:30,hasExactCoords:true,address:'99 Second St'};
+  assert.strictEqual(new Records.RecordIndex([venueA]).find(venueB),-1,'Conflicting addresses must not merge distinct venues');
+  assert.strictEqual(new Records.RecordIndex([venueA]).find({...venueB,address:'1 First St'}),0,'Identical address at the same point still merges');
+  assert.strictEqual(new Records.RecordIndex([{...venueA,address:''}]).find({...venueB,address:'',phone:'+201000000001'}),0,'Absent identity fields never block a merge');
+  assert.strictEqual(new Records.RecordIndex([{...venueA,address:'',phone:'+201000000001'}]).find({...venueB,address:'',phone:'+201000000002'}),-1,'Conflicting phones must not merge distinct venues');
+  const ResultStore=require('../core/result-store');
+  assert.strictEqual(ResultStore.available(),false,'Node has no IndexedDB; the store must report unavailable instead of failing');
+  assert.strictEqual(await ResultStore.save([sample]),false);
+  assert.strictEqual(await ResultStore.load(),null);
   const merged=Records.merge(list[0],{...list[0],discoveryCellIds:['two'],phone:'+20123456789',fieldProvenance:{phone:{provider:'osm_overpass',state:'provided'}}});
   assert.ok(merged.discoveryCellIds.includes('two'));assert.strictEqual(merged.fieldProvenance.phone.state,'provided');
   const first={...list[0],reviewsCount:0,names:{name:'Cafe'},attributes:[{key:'amenity',value:'cafe',provider:'osm_overpass'}],fieldProvenance:{reviewsCount:{sourceUrl:'old'}}};

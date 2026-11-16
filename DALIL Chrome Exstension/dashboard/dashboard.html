@@ -278,6 +278,21 @@
               </div>
             </div>
 
+            <!-- سبب واضح بدل رقم صفر صامت: يظهر عند انتهاء أي عرض بلا سجل جديد -->
+            <div class="live-progress-card card hidden" id="scanDiagnosisCard" role="status" aria-live="polite" data-severity="warn">
+              <div class="live-progress-info">
+                <div class="flex gap4">
+                  <strong id="scanDiagnosisTitle">لماذا لم يُحفظ سجل جديد؟</strong>
+                </div>
+                <div class="flex gap4">
+                  <span class="caption" id="scanDiagnosisText"></span>
+                </div>
+                <div class="flex gap4">
+                  <span class="caption" id="scanDiagnosisCounts" dir="ltr"></span>
+                </div>
+              </div>
+            </div>
+
             <!-- Full-width Map Canvas Host -->
             <div id="workspaceMapContainer" class="workspace-map-host">
               <section class="map-wrap card" id="mapWrapperCard">
@@ -316,7 +331,7 @@
               <div class="map-foot">
                 <span><span data-i18n="mapProvider">خرائط Google</span> · <span class="mono">WGS 84</span></span>
                 <span class="mono" id="mapCellsFoot">0</span><span id="mapRenderNotice" class="caption" role="status"></span>
-                <label class="discovery-visibility"><input id="showUnscannedDiscoveries" type="checkbox"><span data-i18n="showEarlyDiscoveries">إظهار اكتشافات الخلايا التي لم يبدأ فحصها</span></label>
+                <label class="discovery-visibility"><input id="showUnscannedDiscoveries" type="checkbox" checked><span data-i18n="showEarlyDiscoveries">إظهار اكتشافات الخلايا التي لم يبدأ فحصها</span></label>
                 <span id="mapDiscoveryNotice" class="caption" role="status"></span>
               </div>
             </section>
@@ -476,7 +491,7 @@
                   <strong data-i18n="bilingualToggleTitle">دعم التسميات المزدوجة (عربي + إنجليزي)</strong>
                   <small class="source-desc" data-i18n="bilingualToggleDesc">يبحث بالاسم العربي ومرادفه الإنجليزي لضمان استخراج المعالم المسجلة بأسماء لاتينية.</small>
                 </span>
-                <input type="checkbox" id="sideBilingualToggle" checked>
+                <input type="checkbox" id="sideBilingualToggle">
               </label>
 
               <!-- نمط خطة الاستعلامات والتغطية -->
@@ -503,18 +518,6 @@
                     لم تتم إضافة أي ظاهرة بعد. اكتب اسم الظاهرة واضغط «إضافة» أو اختر من المكتبة والمقترحات.
                   </div>
                 </div>
-              </div>
-
-              <!-- مقترحات سريعة شائعة بنقرة واحدة -->
-              <div class="suggested-phenom-box">
-                <div class="suggest-head">
-                  <svg class="icon sm"><use href="#ic-target"/></svg>
-                  <span data-i18n="static51">مقترحات سريعة وشائعة (انقر للإضافة فوراً):</span>
-                </div>
-                <p class="caption" data-i18n="quickLibraryHint">اختيارات عامة تبحث بكلمات قليلة. يُحفظ نوع كل مكان كما يظهر في المصدر.</p>
-                <div class="suggest-chips-row quick-library-chips" id="suggestedPhenomChips"></div>
-                <button type="button" class="btn ghost small" id="btnQuickLibraryMore" aria-expanded="false" aria-controls="suggestedPhenomChips" data-i18n="quickShowMore">عرض المزيد</button>
-                <p class="caption" data-i18n="broadSearchNotice">البحث العام لا يضمن حصر جميع الأماكن. استخدم المكتبة التفصيلية للتوسع في أنواع محددة.</p>
               </div>
             </div>
 
@@ -597,8 +600,8 @@
                   <div class="field">
                     <label data-i18n="lblDrawRect">رسم مستطيل منطقة الدراسة يدوياً على الخريطة</label>
                     <div class="area-tools" role="group" data-i18n-aria-label="areaTools">
-                      <button type="button" id="btnStartDrawRect" class="btn primary" data-i18n="btnDrawRect">رسم مستطيل</button>
-                      <button type="button" id="btnDrawPolygon" class="btn" data-i18n="drawPolygon">رسم مضلع</button>
+                      <button type="button" id="btnStartDrawRect" class="btn" aria-pressed="false" data-i18n="btnDrawRect">رسم مستطيل</button>
+                      <button type="button" id="btnDrawPolygon" class="btn" aria-pressed="false" data-i18n="drawPolygon">رسم مضلع</button>
                       <button type="button" id="btnEditArea" class="btn" data-i18n="editArea">تحرير الرؤوس</button>
                       <button type="button" id="btnUndoArea" class="btn" data-i18n="undo">تراجع</button>
                       <button type="button" id="btnClearStudyArea" class="btn danger-ghost" data-i18n="clearArea">حذف المنطقة</button>
@@ -709,12 +712,12 @@
                   <div class="field">
                     <label for="settingZoomLevel" data-i18n="lblZoom">مستوى التقريب (Zoom Level)</label>
                     <select id="settingZoomLevel">
-                      <option value="auto" selected data-i18n="static77">✨ تلقائي ذكي (يتكيف تلقائياً مع حجم الخلية - مستحسن)</option>
+                      <option value="auto" data-i18n="static77">✨ تلقائي ذكي (يتكيف تلقائياً مع حجم الخلية - مستحسن)</option>
                       <option value="12" data-i18n="static78">12 — نظرة إقليمية شاملة (Regional)</option>
                       <option value="13" data-i18n="static79">13 — نطاق مدينة كاملة (City Scale)</option>
                       <option value="14" data-i18n="static80">14 — قطاع أو حي كبير (Large District)</option>
                       <option value="15" data-i18n="static81">15 — مستوى الحي والشوارع العامة (Sub-district)</option>
-                      <option value="16" data-i18n="static82">16 — شوارع رئيسية (افتراضي)</option>
+                      <option value="16" selected data-i18n="static82">16 — شوارع رئيسية (افتراضي)</option>
                       <option value="17" data-i18n="static83">17 — شوارع فرعية وبلوكات دقيقة (Detailed)</option>
                       <option value="18" data-i18n="static84">18 — مستوى المباني والمحلات الفردية (Venue Level)</option>
                       <option value="19" data-i18n="static85">19 — تفاصيل دقيقة جداً للمواقع المتقاربة (High Precision)</option>
@@ -724,8 +727,8 @@
                     <label for="settingDelayMs" data-i18n="lblDelay">المهلة بين الخلايا والأمان (Delay & Safety)</label>
                     <select id="settingDelayMs">
                       <option value="800" data-i18n="static86">800 ms — فائق السرعة ⚡ (عالي الخطورة)</option>
-                      <option value="1200" data-i18n="static87">1200 ms — سريع ⏱️ (خطورة متوسطة)</option>
-                      <option value="1600" selected data-i18n="static88">1600 ms — متوازن 🛡️ (موصى به - آمن ومستقر)</option>
+                      <option value="1200" selected data-i18n="static87">1200 ms — سريع ⏱️ (خطورة متوسطة)</option>
+                      <option value="1600" data-i18n="static88">1600 ms — متوازن 🛡️ (موصى به - آمن ومستقر)</option>
                       <option value="2400" data-i18n="static89">2400 ms — متمهل 🌿 (آمن جداً)</option>
                       <option value="3600" data-i18n="static90">3600 ms — هادئ فائق الأمان 🔒</option>
                       <option value="4800" data-i18n="static91">4800 ms — حذر استثنائي 🛡️</option>
@@ -780,6 +783,13 @@
                       <div class="option-tile-text">
                         <strong data-i18n="optAccumulate">حفظ النتائج تراكمياً</strong>
                         <small class="source-desc" data-i18n="optAccumulateDesc">إضافة نتائج جديدة فوق السابقة مع تجنب التكرار.</small>
+                      </div>
+                    </label>
+                    <label class="option-tile">
+                      <input type="checkbox" id="checkDeepRefine">
+                      <div class="option-tile-text">
+                        <strong data-i18n="optDeepRefine">تحسين عميق عند نقص النتائج</strong>
+                        <small class="source-desc" data-i18n="optDeepRefineDesc">يقسّم الخلية إلى أربعة مشاهدات إضافية عند توقف التمرير أو نتيجة غير مؤكدة. يضاعف زمن المسح تقريباً.</small>
                       </div>
                     </label>
                   </div>
@@ -955,7 +965,6 @@
   <script src="../lib/xlsx.full.min.js"></script>
   <script src="../core/category-registry.js"></script>
   <script src="../core/search-languages.js"></script>
-  <script src="../core/quick-library.js"></script>
   <script src="../lib/taxonomy-engine.js"></script>
   <script src="../lib/smart-brands.js"></script>
   <script src="../lib/spatial-utils.js"></script>

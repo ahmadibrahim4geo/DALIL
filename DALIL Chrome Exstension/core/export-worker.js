@@ -1,13 +1,19 @@
 /* Dedicated local export worker: no remote executable resources, network providers or DOM. */
 'use strict';
-importScripts('category-registry.js','search-languages.js','quick-library.js', '../lib/taxonomy-engine.js', 'records.js', 'symbology.js', '../lib/xlsx.full.min.js', '../lib/export-utils.js');
+importScripts('category-registry.js','search-languages.js', '../lib/taxonomy-engine.js', 'records.js', 'symbology.js', '../lib/xlsx.full.min.js', '../lib/export-utils.js');
 self.onmessage = async function (event) {
   const { requestId, format, records, prefix, categoryFilter, options = {} } = event.data || {};
   try {
     if (!Array.isArray(records)) throw new Error('Invalid export records');
     ExportUtils.setLanguage(options.language || 'ar');
     const selection = ExportUtils.selectExportRecords(records, categoryFilter);
-    if (!selection.included.length) throw new Error(ExportUtils.messages(options).empty);
+    if (!selection.included.length) {
+      const reasons = selection.excluded.reduce((counts, row) => { counts[row.reason] = (counts[row.reason] || 0) + 1; return counts; }, {});
+      const error = new Error(ExportUtils.restrictionReport(records, categoryFilter, options));
+      error.code = selection.excluded.length ? 'EXPORT_RESTRICTED' : 'EXPORT_EMPTY';
+      error.details = { total: records.length, exportable: 0, restricted: selection.excluded.length, reasons };
+      throw error;
+    }
     const files = [];
     const text = (content, extension, type) => files.push({ name: ExportUtils.exportFilename(prefix, categoryFilter, extension), type, bytes: new TextEncoder().encode(content) });
     if (format === 'xlsx' || format === 'excel') files.push({ name: ExportUtils.exportFilename(prefix, categoryFilter, 'xlsx'), type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', bytes: ExportUtils.serializeWorkbook(ExportUtils.buildWorkbook(records, categoryFilter, options), options) });
@@ -30,6 +36,6 @@ self.onmessage = async function (event) {
     else throw new Error('Unsupported export format');
     self.postMessage({ requestId, success: true, files }, files.map(file => file.bytes.buffer));
   } catch (error) {
-    self.postMessage({ requestId, success: false, error: error.message || 'Export failed' });
+    self.postMessage({ requestId, success: false, error: error.message || 'Export failed', errorCode: error.code || 'EXPORT_FAILED', details: error.details || null });
   }
 };

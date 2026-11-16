@@ -11,7 +11,7 @@
     "alarms"
   ],
   "host_permissions": [
-    "https://*.google.com/maps/*",
+    "https://*.google.com/maps*",
     "https://maps.google.com/*",
     "https://*.google.com/search*",
     "https://*.tile.openstreetmap.org/*",
@@ -32,7 +32,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.google.com/maps/*",
+        "https://*.google.com/maps*",
         "https://maps.google.com/*",
         "https://*.google.com/search*"
       ],

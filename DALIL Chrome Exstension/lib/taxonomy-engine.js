@@ -2049,7 +2049,7 @@ const DALIL_BILINGUAL_CONCEPTS = [
   { ar: "مطار", en: "Airport", aliases: ["مطارات", "صالة سفر", "airport", "airfield"] },
 
   // التعليم
-  { ar: "مدرسة", en: "School", aliases: ["مدارس", "مدرسة تجريبية", "مدرسة خاصة", "مدرسة لغات", "school", "academy"] },
+  { ar: "مدرسة", en: "School", aliases: ["مدارس", "مدرسة تجريبية", "مدرسة خاصة", "مدرسة لغات", "الفصل الواحد", "مدارس الفصل الواحد", "مدرسة الفصل الواحد", "مدارس مجتمعية", "school", "academy", "one-classroom school"] },
   { ar: "جامعة", en: "University", aliases: ["جامعات", "كلية", "كليات", "معهد عالي", "university", "college", "campus"] },
   { ar: "حضانة", en: "Kindergarten, Nursery", aliases: ["حضانات", "رياض أطفال", "kindergarten", "nursery", "preschool"] },
 
@@ -2762,9 +2762,6 @@ if (DALIL_REGISTRY_LIBRARY && DALIL_CATEGORY_REGISTRY) DALIL_REGISTRY_LIBRARY.us
 const DALIL_SEARCH_LANGUAGES = typeof SearchLanguages !== 'undefined'
   ? SearchLanguages
   : (typeof require === 'function' ? require('../core/search-languages.js') : null);
-const DALIL_QUICK_LIBRARY = typeof DalilQuickLibrary !== 'undefined'
-  ? DalilQuickLibrary
-  : (typeof require === 'function' ? require('../core/quick-library.js') : null);
 
 // UI-only supplemental branches do not change the 940 deterministic legacy leaves.
 const DALIL_PROVIDER_SECTORS = {
@@ -2781,8 +2778,6 @@ const TaxonomyEngine = {
 
   getLocalizedLeaf(leafOrName, locale = 'ar', branchId = null) {
     if (leafOrName?.kind === 'free_text') return leafOrName.text;
-    const quick = DALIL_QUICK_LIBRARY?.get(leafOrName);
-    if (quick) return quick.labels[String(locale).split('-')[0]] || quick.labels.en;
     if (this.registry) return this.registry.getLocalizedLeaf(branchId && typeof leafOrName === 'string' ? { name_ar: leafOrName, branchId } : leafOrName, locale);
     const leaf = typeof leafOrName === 'object' ? leafOrName : this.getLeafMeta(leafOrName);
     if (String(locale).startsWith('en')) return leaf?.name_en || 'Custom search term';
@@ -2859,7 +2854,6 @@ const TaxonomyEngine = {
 
   selectionId(value) {
     if (value?.kind === 'free_text') return DALIL_SEARCH_LANGUAGES?.createFreeText(value.text, value.locale || 'ar') || value;
-    if (DALIL_QUICK_LIBRARY?.get(value)) return value;
     const leaf=this.getLeafMeta(value);
     if(leaf?.descriptiveAttributes?.length)return value; // Explicit descriptive searches remain explicit.
     return this.getCategory(value)?.canonicalId||this.resolveConcept(value)?.canonicalId||value;
@@ -2869,14 +2863,9 @@ const TaxonomyEngine = {
     return value?.kind === 'free_text' ? 'free_text:' + (DALIL_SEARCH_LANGUAGES?.normalizeLocale(value.locale || 'ar') || value.locale || 'ar') + ':' + value.text : String(this.selectionId(value));
   },
 
-  getQuickCategories() { return DALIL_QUICK_LIBRARY?.list() || []; },
-  getQuickCategory(value) { return DALIL_QUICK_LIBRARY?.get(value) || null; },
-
+  // تلميح الفئة من عبارة بحث حرّة: مطابقة مفهوم قائمة فقط، وبلا تخمين.
   resolveSearchHint(text, options = {}) {
-    const exact=this.resolveConcept(text,options);if(exact)return exact;
-    if(this.registry?.rankCandidates(text,{...options,fuzzy:false}).some(c=>c.requiresReview))return null;
-    const ids=DALIL_QUICK_LIBRARY?.findHintIds(text)||[];
-    return ids.length===1?this.getCategory(ids[0]):null;
+    return this.resolveConcept(text, options);
   },
 
   getLibrarySectors(queryText = '') {
@@ -3341,16 +3330,34 @@ const TaxonomyEngine = {
       const original = typeof input === 'string' ? input : '';
       const clean = String(typeof input === 'object' ? input?.id || input?.canonicalId || input?.name_ar || '' : input || '').trim();
       if (!clean) continue;
-      const quick=DALIL_QUICK_LIBRARY?.get(clean);
-      if (quick) { add({...quick,branchId:quick.id,name_ar:quick.labels.ar,name_en:quick.labels.en}); continue; }
       let sector = DALIL_SECTORS.find(s => [s.id, s.name_ar, s.name_en].includes(clean));
-      if (!sector && clean.includes('مساجد') && clean.includes('دور عبادة')) sector = this.getSector('S01');
+      if (!sector && clean.includes('دور عبادة')) sector = this.getSector('S01');
+      if (!sector) {
+        const normClean = clean.replace(/^(ال|al-)/i, '').trim().toLowerCase();
+        sector = DALIL_SECTORS.find(s => {
+          const normAr = s.name_ar.replace(/^(ال|al-)/i, '').trim().toLowerCase();
+          const normEn = (s.name_en || '').toLowerCase();
+          return normAr === normClean || normEn === normClean;
+        });
+      }
       if (sector) { this.getAllLeavesWithMeta(sector.id).forEach(add); continue; }
       let branch = null;
       for (const s of DALIL_SECTORS) {
         branch = s.branches.find(b => [b.id, b.name_ar, b.name_en].includes(clean)); if (branch) break;
       }
       if (!branch && clean.includes('مساجد') && clean.includes('جوامع')) branch = this.getBranch('S01.B01');
+      if (!branch && (clean.includes('فصل واحد') || clean.includes('الفصل الواحد') || clean.includes('مدارس مجتمعية'))) branch = this.getBranch('S08.B02');
+      if (!branch) {
+        const normClean = clean.replace(/^(ال|al-)/i, '').trim().toLowerCase();
+        for (const s of DALIL_SECTORS) {
+          branch = s.branches.find(b => {
+            const normAr = b.name_ar.replace(/^(ال|al-)/i, '').trim().toLowerCase();
+            const normEn = (b.name_en || '').toLowerCase();
+            return b.id === clean || normAr === normClean || normEn === normClean;
+          });
+          if (branch) break;
+        }
+      }
       if (branch) { this.getAllLeavesWithMeta(branch.id).forEach(add); continue; }
       const leaf = this.getLeafMeta(clean);
       if (leaf) { add(leaf); continue; }
@@ -3422,9 +3429,7 @@ const TaxonomyEngine = {
         }
         const selection = leaf.kind === 'free_text' ? { ...leaf, locale } : leaf;
         const termOptions = { locale, category, queryTerms: options.queryTerms, fallbackLanguage };
-        const resolution = leaf.kind === 'quick_category'
-          ? DALIL_QUICK_LIBRARY.resolveTerms(selection, termOptions, languages)
-          : languages.resolveTerms(selection, termOptions);
+        const resolution = languages.resolveTerms(selection, termOptions);
         if (resolution.missingTranslation) for (const represented of representedLeaves) missingTranslations.push({
           ...resolution.missingTranslation, selectionId: represented.id, canonicalId: represented.canonicalId || null,
           representedBy: kind === 'representative' ? leaf.id : null
@@ -3436,7 +3441,7 @@ const TaxonomyEngine = {
     else {
       const groups = new Map();
       for (const leaf of expanded) {
-        if (leaf.kind==='quick_category'||leaf.kind==='free_text') { scheduleLeaf(leaf); continue; }
+        if (leaf.kind==='free_text') { scheduleLeaf(leaf); continue; }
         const key = leaf.branchId || leaf.id;
         if (!groups.has(key)) groups.set(key, []); groups.get(key).push(leaf);
       }

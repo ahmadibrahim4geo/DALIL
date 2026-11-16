@@ -3095,60 +3095,6 @@ input[type="checkbox"]:focus-visible {
   padding: 0 12px;
 }
 
-.suggested-phenom-box {
-  background: var(--paper-2);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-sm);
-  padding: 12px 14px;
-  margin-top: 4px;
-}
-
-.suggest-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--blue-ink);
-  margin-bottom: 9px;
-}
-
-.suggest-head .icon {
-  color: var(--accent);
-}
-
-.suggest-chips-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.quick-library-chips:not(.is-expanded) .suggest-chip:nth-child(n+13){display:none}
-.suggest-chip.selected{border-color:var(--accent);background:var(--accent-soft)}
-
-.suggest-chip {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 5px 11px;
-  border-radius: 99px;
-  cursor: pointer;
-  transition: all var(--dur) var(--ease);
-  font-family: inherit;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.suggest-chip:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(241, 110, 72, 0.15);
-}
-
 /* Taxonomy tree scroll within the library panel */
 .taxonomy-library-panel .taxonomy-tree-list {
   flex: 1;
@@ -4073,6 +4019,40 @@ input[type="checkbox"]:focus-visible {
   border-radius: var(--r);
   box-shadow: 0 4px 16px rgba(241, 110, 72, 0.12);
   animation: slideDown 0.3s ease;
+}
+
+/* يشرح سبب عدم حفظ سجلات بدل إظهار صفر صامت */
+#scanDiagnosisCard .live-progress-info {
+  display: block;
+}
+
+#scanDiagnosisCard[data-severity="error"] {
+  border-color: #dc2626;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.18);
+}
+
+#scanDiagnosisCard[data-severity="warn"] {
+  border-color: #d97706;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.18);
+}
+
+#scanDiagnosisCard[data-severity="ok"] {
+  border-color: #16a34a;
+}
+
+#scanDiagnosisCard #scanDiagnosisText {
+  display: block;
+  margin-top: 6px;
+  line-height: 1.7;
+  white-space: normal;
+}
+
+#scanDiagnosisCard #scanDiagnosisCounts {
+  display: block;
+  margin-top: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  opacity: 0.75;
 }
 
 .live-progress-info {

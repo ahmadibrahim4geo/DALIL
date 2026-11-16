@@ -6,16 +6,41 @@
  */
 
 (function () {
+  // إعادة تحميل الإضافة لا يجب أن تترك الصفحة معطّلة: نُوقف النسخة السابقة إن كانت
+  // حيّة، ثم نُكمل التهيئة دائمًا بدل الخروج المبكر.
   if (typeof window !== "undefined") {
-    if (window.__GMAPS_GRID_SCRAPER_INJECTED__) return;
+    try { window.__DALIL_DISPOSE__?.(); } catch (_) {}
     window.__GMAPS_GRID_SCRAPER_INJECTED__ = true;
+    window.__DALIL_CONTENT_ALIVE__ = true;
+    window.__DALIL_HEARTBEAT__ = Date.now();
+  }
+  const disposers = [];
+  if (typeof window !== "undefined") {
+    window.__DALIL_DISPOSE__ = () => {
+      while (disposers.length) { try { disposers.pop()(); } catch (_) {} }
+      window.__DALIL_CONTENT_ALIVE__ = false;
+    };
+  }
+  if (typeof window !== "undefined" && typeof setInterval === "function") {
+    const heartbeat = setInterval(() => { try { window.__DALIL_HEARTBEAT__ = Date.now(); } catch (_) {} }, 5000);
+    if (heartbeat && typeof heartbeat.unref === "function") heartbeat.unref();
+    disposers.push(() => clearInterval(heartbeat));
   }
 
   let activeTask = null;
   let preparedTask = null;
+  // آخر مهمة جُهّزت في هذا المستند. تبقى بعد انتهاء القراءة لأن أوامر مثل
+  // «البحث في هذه المنطقة» تُنفّذ في نفس الصفحة بعد القراءة، وتحتاج هوية المهمة.
+  let lastPreparedTask = null;
   let preparedNavigation = null;
+  let currentScrapePlacesMap = new Map();
   let uiLanguage = 'ar';
   let overlayContext=null;
+  let overlayPosition=null;
+  let areaSearchClicked=false;
+  // بصمة هذا المستند فقط. تُتيح للعامل الخلفي إثبات أن الصفحة أُعيد تحميلها فعلًا
+  // بدل قراءة نفس صفحة الخلية السابقة (سبب ظهور نتائج لا تنتمي للخلية).
+  const DOCUMENT_ID = 'doc_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
   const copyTask = task => task ? {jobId:task.jobId,cellId:task.cellId,queryId:task.queryId,areaVersion:task.areaVersion} : null;
   const validTask = task => task && ['jobId','cellId','queryId'].every(k=>typeof task[k]==='string' && task[k]);
   function sameTask(a,b){return !!a && !!b && ['jobId','cellId','queryId','areaVersion'].every(k=>a[k]===b[k]);}
@@ -24,49 +49,155 @@
     const blocked=detectSourceBlock();
     if(blocked)throw Object.assign(new Error('The source requires attention; collection stopped.'),{code:blocked});
   }
+  // هامش التحقق من مركز الكاميرا = عرض نطاق الخريطة عند مستوى التكبير الحالي.
+  // الهامش السابق (50 كم) كان يُبطل التحقق عمليًا ويسمح بنسب نتائج حيٍّ آخر إلى الخلية.
+  function cameraToleranceMeters(url){
+    try{
+      const view=DalilSearchNavigation.view(url);
+      if(!view||!Number.isFinite(view.scale)||view.scale<=0)return 150;
+      if(view.unit==='m')return Math.max(100,Math.min(1500,view.scale));
+      const metersPerPixel=156543.03392*Math.cos(view.lat*Math.PI/180)/Math.pow(2,view.scale);
+      return Math.max(100,Math.min(1500,metersPerPixel*1024));
+    }catch(_){return 150;}
+  }
+  /**
+   * لقطة من حالة الصفحة نفسها عند لحظة القراءة. «صفر سجل» له سببان مختلفان
+   * تمامًا: منطقة بلا نتائج، أو صفحة لم ترسم أي بطاقة أصلًا (تبويب في الخلفية،
+   * تحميل ناقص، أو تغيّر في الصفحة). بلا هذه اللقطة لا يمكن التمييز بينهما.
+   */
+  function domEvidence(){
+    try{
+      const feed=document.querySelector('div[role="feed"]');
+      return {feed:!!feed,
+        cards:feed?feed.querySelectorAll('a[href*="/maps/place/"], a.hfpxzc').length:0,
+        anyCards:document.querySelectorAll('a[href*="/maps/place/"]').length,
+        visibility:document.visibilityState||'unknown',
+        readyState:document.readyState,
+        feedHeight:feed?feed.scrollHeight:0};
+    }catch(_){return null;}
+  }
+
+  /**
+   * مقاس ما تراه الخريطة فعلًا. Google يقصر قائمة النتائج على هذا النطاق،
+   * فبدونه لا يمكن إثبات أن الخلية قُرئت كاملة.
+   */
+  function viewportEvidence(observed, requestedZoom){
+    try{
+      const view=observed||DalilSearchNavigation.view(window.location.href);
+      if(!view)return null;
+      const pixels=DalilSearchNavigation.pixelsOf({width:window.innerWidth,height:window.innerHeight});
+      const zoom=view.unit==='z'?Number(view.scale):Number(requestedZoom);
+      if(!Number.isFinite(zoom))return null;
+      const mpp=DalilSearchNavigation.metersPerPixel(view.lat,zoom);
+      if(!mpp)return null;
+      return {zoom,pixels,widthMeters:Math.round(pixels.width*mpp),heightMeters:Math.round(pixels.height*mpp)};
+    }catch(_){return null;}
+  }
   function verifyPreparedCamera(){
     if(!preparedNavigation)return null;
-    const view=DalilSearchNavigation.verify(window.location.href,preparedNavigation.targetUrl,DalilSearchNavigation.searchValue(document));
-    if(!view.verified)throw Object.assign(new Error('The source moved away from the requested cell.'),{code:'NAVIGATION_VIEW_MISMATCH'});
-    return view;
+    try {
+      const view=DalilSearchNavigation.verify(window.location.href,preparedNavigation.targetUrl,DalilSearchNavigation.searchValue(document),cameraToleranceMeters(preparedNavigation.targetUrl));
+      return view;
+    } catch(e) {
+      // تعذّر إثبات المطابقة ليس إثباتًا لها.
+      return { verified: false, centerVerified: false, queryVerified: false, reason:'verification_failed', warning: e.message };
+    }
+  }
+  // عنصر الحظر يجب أن يكون مرئيًا فعلًا: reCAPTCHA مخفي داخل صفحة عادية ليس حظرًا.
+  function visibleBlockElement(){
+    if(typeof document==='undefined'||typeof document.querySelectorAll!=='function')return false;
+    let nodes=[];
+    try{nodes=Array.from(document.querySelectorAll('iframe[src*="recaptcha"], form[action*="/sorry/"], #captcha-form'));}catch(_){return false;}
+    return nodes.some(node=>{
+      try{
+        if(typeof node.getBoundingClientRect!=='function')return false;
+        const rect=node.getBoundingClientRect();
+        return !!rect && rect.width>=40 && rect.height>=40;
+      }catch(_){return false;}
+    });
   }
   function detectSourceBlock(){
     if(typeof document==='undefined')return null;
     const text=(document.body?.innerText||'').slice(0,80000);
-    if(document.querySelector('iframe[src*="recaptcha"], form[action*="/sorry/"], #captcha-form') || /unusual traffic|أنظمة.*زيارات غير عادية|حركة مرور غير عادية/i.test(text))return 'SOURCE_BLOCKED';
+    if(visibleBlockElement() || /unusual traffic|أنظمة.*زيارات غير عادية|حركة مرور غير عادية/i.test(text))return 'SOURCE_BLOCKED';
     if(/trafic inhabituel|tráfico inusual|tráfego incomum|ungewöhnlicher datenverkehr|通常と異なるトラフィック|异常流量|異常流量|असामान्य ट्रैफ़िक/i.test(text))return 'SOURCE_BLOCKED';
     if(/too many requests|rate limit exceeded|trop de requêtes|demasiadas solicitudes|zu viele anfragen|muitas solicitações|请求过多|請求過多|リクエストが多すぎ/i.test(text))return 'RATE_LIMITED';
     return null;
   }
   // Messages bind all work to one prepared navigation identity.
-  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  const onRuntimeMessage = (request, sender, sendResponse) => {
     if(sender?.id && chrome.runtime.id && sender.id!==chrome.runtime.id){sendResponse({success:false,errorCode:'UNTRUSTED_SENDER'});return false;}
+    if(request.action==='JOB_STATUS'){
+      const state=request.state;
+      if(state && overlayContext?.jobId===state.jobId){
+        const c=state.currentCell;
+        const info={...(overlayContext.cellInfo||{}),...(c||{}),index:state.currentIndex,total:state.stats?.totalCells,
+          currentQueryIndex:state.currentQueryIndex,totalQueries:state.totalQueries,completedTasks:state.stats?.currentStep};
+        showOverlayStatus(info,state.activeQueryText||overlayContext.query,state.jobId);
+        const phase=state.status==='running'?'collecting':state.status;
+        updateOverlayStatus(uiLanguage==='en'?(phase==='paused'?'Paused — progress is saved':phase==='stopped'?'Stopped':phase==='completed'?'Scheduled search finished':'Loading cell results…'):
+          (phase==='paused'?'متوقف مؤقتًا — التقدم محفوظ':phase==='stopped'?'توقفت المهمة':phase==='completed'?'انتهت مهام البحث المجدولة':'جار تحميل نتائج الخلية…'),phase==='completed',phase);
+      }
+      sendResponse({success:true});return false;
+    }
     if(request.action==='CANCEL_SCRAPE'){
       if(activeTask)activeTask.cancelled=true;
       preparedTask=null;preparedNavigation=null;
-      if(request.status)updateOverlayStatus(uiLanguage==='en'?(request.status==='paused'?'Paused — progress is saved':'Stopped'):(request.status==='paused'?'متوقف مؤقتًا — التقدم محفوظ':'توقفت المهمة'),false,request.status);
+      const isStopped = request.status === 'stopped';
+      const statusLabel = uiLanguage==='en' ? (isStopped ? 'Stopped' : 'Paused — progress is saved') : (isStopped ? 'توقفت المهمة' : 'متوقف مؤقتًا — التقدم محفوظ');
+      updateOverlayStatus(statusLabel, false, request.status || 'stopped');
       sendResponse({success:true});return false;
     }
     if(request.action==='PREPARE_TASK'){
       try{
         const current=new URL(window.location.href),target=new URL(request.targetUrl);
         const nonce=JSON.parse(decodeURIComponent(target.hash.replace(/^#dalil=/,'')));
-        if(!validTask(request.task) || !sameTask(nonce,request.task) || !current.pathname.startsWith('/maps/'))throw new Error('Navigation identity mismatch.');
+        if(!validTask(request.task) || !sameTask(nonce,request.task) || !/^\/maps(\/|$)/.test(current.pathname))throw new Error('Navigation identity mismatch.');
         if(document.readyState!=='complete')throw new Error('Page is not ready.');
         const requestedQuery=DalilSearchNavigation.query(target.href);
         const currentQuery=DalilSearchNavigation.query(current.href);
         const searchValue=DalilSearchNavigation.searchValue(document);
         if(requestedQuery!==currentQuery && requestedQuery!==searchValue)throw new Error('Search query mismatch.');
-        const view=DalilSearchNavigation.verify(current.href,target.href,searchValue);
-        if(!view.verified)throw Object.assign(new Error('The requested cell camera was not confirmed.'),{code:'NAVIGATION_VIEW_MISMATCH'});
+        const requestedTolerance=Number(request.cameraToleranceMeters)>0?Number(request.cameraToleranceMeters):cameraToleranceMeters(target.href);
+        // الحد الصارم يمنع نسب مدينة أخرى للخلية، لكنه لا يوقف الجمع بسبب إعادة تمركز بسيطة.
+        const hardLimit=Number(request.hardCameraLimitMeters)>0?Number(request.hardCameraLimitMeters):Math.max(requestedTolerance,600);
+        const view=DalilSearchNavigation.verify(current.href,target.href,searchValue,requestedTolerance);
+        // نص البحث شرط صارم: بدونه قد تُنسب نتائج استعلام آخر إلى الخلية.
+        if(!view.queryVerified)throw Object.assign(new Error('The requested search query was not confirmed.'),{code:'NAVIGATION_VIEW_MISMATCH',view});
+        // الصفحة يجب أن تكون صفحة هذه الخلية: الكاميرا فوقها، لا فوق حيٍّ آخر.
+        if(view.centerErrorMeters!=null && view.centerErrorMeters>hardLimit){
+          throw Object.assign(new Error('The requested cell camera was not confirmed.'),{code:'CAMERA_NOT_AT_CELL',view});
+        }
         assertActive(null);
         if(activeTask)activeTask.cancelled=true;
         preparedTask=copyTask(request.task);
+        lastPreparedTask=copyTask(request.task);
+        areaSearchClicked=false;
         preparedNavigation={targetUrl:target.href,view};
-        sendResponse({success:true,task:preparedTask,url:current.href,readyState:document.readyState,view});
+        sendResponse({success:true,task:preparedTask,url:current.href,readyState:document.readyState,view,documentId:DOCUMENT_ID,
+          viewport:viewportEvidence(view.observed,request.zoom)});
       }catch(error){sendResponse({success:false,errorCode:error.code||'STALE_PAGE',error:error.message});}
       return false;
+    }
+    if (request.action === "SEARCH_THIS_AREA") {
+      if(!validTask(request.task) || !sameTask(request.task,lastPreparedTask)){sendResponse({success:false,errorCode:'TASK_NOT_PREPARED',clicked:false});return false;}
+      const feed=document.querySelector('div[role="feed"]');
+      const firstBefore=document.querySelector('a[href*="/maps/place/"], a.hfpxzc')?.href||'';
+      const clicked=clickSearchThisAreaIfPresent();
+      if(!clicked){sendResponse({success:true,clicked:false,changed:false,count:document.querySelectorAll('a[href*="/maps/place/"]').length});return false;}
+      // لا يكفي وجود بطاقات قديمة: ننتظر أن تستبدلها Google بنتائج هذا النطاق.
+      (async () => {
+        let changed=false;
+        const started=Date.now();
+        while(Date.now()-started<9000){
+          await sleep(600);
+          const firstNow=document.querySelector('a[href*="/maps/place/"], a.hfpxzc')?.href||'';
+          if(firstNow&&firstNow!==firstBefore){changed=true;break;}
+        }
+        if(feed)await waitForFirstCards(feed,3000);
+        sendResponse({success:true,clicked:true,changed,count:document.querySelectorAll('a[href*="/maps/place/"]').length});
+      })().catch(()=>sendResponse({success:true,clicked:true,changed:false}));
+      return true;
     }
     if (request.action === "SCRAPE_PAGE") {
       if(!validTask(request.task) || !sameTask(request.task,preparedTask)){sendResponse({success:false,errorCode:'TASK_NOT_PREPARED',items:[]});return false;}
@@ -79,30 +210,41 @@
       const cellInfo = request.cellInfo || null;
       const currentQuery = request.query || "";
 
-      showOverlayStatus(cellInfo, currentQuery);
+      showOverlayStatus(cellInfo, currentQuery,request.task.jobId);
+      currentScrapePlacesMap.clear();
 
       scrapeGoogleMaps(Math.min(5000,Math.max(1,maxItems)), Math.max(500,scrollDelay), cellInfo)
         .then((res) => {
           assertActive(token);
           const view=verifyPreparedCamera();
           const items = Array.isArray(res) ? res : (res && res.items ? res.items : []);
-          const completenessStatus = (res && res.completenessStatus) || (items.length > 0 ? "partial" : "unknown");
+          const limitedView=hasLimitedView();
+          let completenessStatus = (res && res.completenessStatus) || (items.length > 0 ? "partial" : "unknown");
+          if(limitedView&&!['capped','unknown'].includes(completenessStatus))completenessStatus='partial';
           if (items.length > 0) {
-            updateOverlayStatus(uiLanguage==='en'?`${items.length} records observed.`:`تم رصد ${items.length} سجلًا.`, true,completenessStatus);
+            updateOverlayStatus((uiLanguage==='en'?`${items.length} records observed.`:`تم رصد ${items.length} سجلًا.`)+(limitedView?(uiLanguage==='en'?' Google is showing a limited view; results are partial.':' يعرض Google نسخة محدودة؛ النتائج جزئية.') : ''), !limitedView,completenessStatus);
           } else {
             updateOverlayStatus(uiLanguage==='en'?(completenessStatus==='confirmed_empty'?'The source returned no results.':'No results could be verified.'):(completenessStatus==='confirmed_empty'?'لم يُرجع المصدر نتائج.':'لم يمكن التحقق من النتائج.'), completenessStatus==='confirmed_empty',completenessStatus);
           }
           activeTask=null;
           preparedTask=null;
           sendResponse({success:true,items,count:items.length,completenessStatus,task:token.task,
-            evidence:{url:window.location.href,view,emptyVerified:completenessStatus==='confirmed_empty' && hasExplicitNoResults(),observedAt:new Date().toISOString()}});
+            evidence:{url:window.location.href,view,limitedView,emptyVerified:completenessStatus==='confirmed_empty' && hasExplicitNoResults(),dom:domEvidence(),observedAt:new Date().toISOString()}});
         })
         .catch((error) => {
           console.error("[Grid Scraper Content Error]:", error);
           if(activeTask!==token)return sendResponse({success:false,errorCode:'CANCELLED',task:token.task,items:[]});
           activeTask=null;
-          updateOverlayStatus(uiLanguage==='en'?'Collection stopped.':'توقف جمع البيانات.', false,'stopped');
-          sendResponse({ success: false, error: error.message,errorCode:error.code||'SCRAPE_FAILED',task:token.task, items: [] });
+          if(!token.cancelled)updateOverlayStatus(uiLanguage==='en'?'Collection stopped.':'توقف جمع البيانات.', false,'stopped');
+          const harvestedItems = Array.from(currentScrapePlacesMap.values());
+          sendResponse({
+            success: harvestedItems.length > 0,
+            items: harvestedItems,
+            count: harvestedItems.length,
+            error: error.message,
+            errorCode: error.code || 'SCRAPE_FAILED',
+            task: token.task
+          });
         });
 
       return true; // إبقاء قناة الاتصال مفتوحة للرد غير المتزامن
@@ -112,40 +254,63 @@
       sendResponse({ status: "ready" });
       return false;
     }
-  });
+  };
+  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener(onRuntimeMessage);
+    disposers.push(() => { try { chrome.runtime?.onMessage?.removeListener?.(onRuntimeMessage); } catch (_) {} });
   }
 
   /**
    * شريط الإشعارات العلوي الحي على خريطة جوجل
    */
-  function showOverlayStatus(cellInfo,query){
+  function showOverlayStatus(cellInfo,query,jobId=overlayContext?.jobId){
     const ar=uiLanguage!=='en';
-    overlayContext={cellInfo,query};
+    overlayContext={cellInfo,query,jobId};
     let panel=document.getElementById('__gmaps_scraper_overlay');
-    if(!panel){panel=document.createElement('aside');panel.id='__gmaps_scraper_overlay';document.body.appendChild(panel);}
+    if(!panel){panel=document.createElement('aside');panel.id='__gmaps_scraper_overlay';document.body.appendChild(panel);
+      try{overlayPosition=JSON.parse(sessionStorage.getItem('dalilOverlayPosition'));}catch(_){}
+      let drag=null;
+      panel.addEventListener('pointerdown',event=>{
+        if(!event.target.closest('[data-dalil-drag]')||event.button>0)return;
+        const rect=panel.getBoundingClientRect();drag={x:event.clientX-rect.left,y:event.clientY-rect.top};
+        panel.setPointerCapture(event.pointerId);event.preventDefault();
+      });
+      panel.addEventListener('pointermove',event=>{if(!drag)return;overlayPosition={left:event.clientX-drag.x,top:event.clientY-drag.y};positionOverlay(panel);});
+      const finish=()=>{if(!drag)return;drag=null;try{sessionStorage.setItem('dalilOverlayPosition',JSON.stringify(overlayPosition));}catch(_){}};
+      panel.addEventListener('pointerup',finish);panel.addEventListener('pointercancel',finish);
+      window.addEventListener('resize',()=>positionOverlay(panel));
+    }
     panel.setAttribute('aria-live','polite');panel.setAttribute('role','status');
-    panel.style.cssText='position:fixed;top:16px;right:16px;z-index:2147483646;width:330px;max-width:calc(100vw - 32px);box-sizing:border-box;background:#102235;color:#eef7ff;border:1px solid #35c5de;border-radius:14px;padding:16px;box-shadow:0 10px 30px #0005;font:13px/1.6 Segoe UI,Tahoma,sans-serif;pointer-events:none;direction:'+(ar?'rtl':'ltr');
-    const cells=cellInfo?.total||1,index=cellInfo?.index||0,queries=cellInfo?.totalQueries||1,q=cellInfo?.currentQueryIndex||0;
-    const progress=Math.round((q*cells+index)/(queries*cells)*100);
+    panel.style.cssText='position:fixed;top:16px;left:16px;z-index:2147483646;width:330px;max-width:calc(100vw - 32px);box-sizing:border-box;background:#102235;color:#eef7ff;border:1px solid #35c5de;border-radius:14px;padding:16px;box-shadow:0 10px 30px #0005;font:13px/1.6 Segoe UI,Tahoma,sans-serif;pointer-events:auto;direction:'+(ar?'rtl':'ltr');
+    const cells=cellInfo?.total||1,index=Math.min(cellInfo?.index||0,cells-1),queries=cellInfo?.totalQueries||1,q=Math.min(cellInfo?.currentQueryIndex||0,queries-1);
+    const progress=Math.min(100,Math.round((cellInfo?.completedTasks??(q*cells+index))/(queries*cells)*100));
     const cellLabel=(ar?'الخلية ':'Cell ')+(index+1)+' / '+cells;
-    const position=Number.isInteger(cellInfo?.row)?(ar?'الصف ':'Row ')+(cellInfo.row+1)+' · '+(ar?'العمود ':'Column ')+(cellInfo.col+1):'';
-    panel.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;color:#67e8f9;font-weight:700"><span>DALIL</span><span id="__dalil_overlay_phase">'+escapeHtml(ar?'جار البحث':'Searching')+'</span></div>'+
+    const position=(Number.isInteger(cellInfo?.row)?(ar?'الصف ':'Row ')+(cellInfo.row+1)+' · '+(ar?'العمود ':'Column ')+(cellInfo.col+1):'')+
+      (cellInfo?.scanTotal>1?' · '+(ar?'فحص تفصيلي ':'Detail scan ')+(cellInfo.scanIndex+1)+' / '+cellInfo.scanTotal:'');
+    panel.innerHTML='<div data-dalil-drag title="'+(ar?'اسحب لتحريك اللوحة':'Drag to move')+'" style="display:flex;justify-content:space-between;gap:12px;color:#67e8f9;font-weight:700;cursor:move;touch-action:none"><span>⠿ DALIL</span><span id="__dalil_overlay_phase">'+escapeHtml(ar?'جار البحث':'Searching')+'</span></div>'+
       '<div style="font-size:17px;font-weight:700;overflow-wrap:anywhere;margin:7px 0">'+escapeHtml(query)+'</div>'+
-      '<div style="color:#b8cadb">'+escapeHtml(ar?'الظاهرة ':'Feature ')+'<bdi dir="ltr">'+(q+1)+' / '+queries+'</bdi> · '+escapeHtml(ar?'الخلية ':'Cell ')+'<bdi dir="ltr">'+(index+1)+' / '+cells+'</bdi>'+'</div>'+
+      '<div style="color:#b8cadb">'+escapeHtml(ar?'عبارة البحث ':'Search term ')+'<bdi dir="ltr">'+(q+1)+' / '+queries+'</bdi> · '+escapeHtml(ar?'الخلية ':'Cell ')+'<bdi dir="ltr">'+(index+1)+' / '+cells+'</bdi>'+'</div>'+
       '<div style="font-size:12px;color:#b8cadb">'+escapeHtml(position)+'</div>'+
       '<div id="__dalil_overlay_camera" style="font-size:11px;color:#67e8f9">'+escapeHtml(ar?'تم التحقق من مركز الخلية من رابط الخريطة':'Cell camera confirmed from the map URL')+'</div>'+
       '<div style="height:6px;background:#31485d;border-radius:8px;margin:12px 0 5px;overflow:hidden"><div id="__dalil_overlay_bar" style="height:100%;background:#36c7e5;width:'+progress+'%"></div></div>'+
-      '<div style="display:flex;justify-content:space-between;font-size:11px;color:#b8cadb"><span>'+escapeHtml(ar?'تقدم المهام المجدولة':'Scheduled task progress')+'</span><span>'+progress+'%</span></div>'+
+      '<div style="display:flex;justify-content:space-between;font-size:11px;color:#b8cadb"><span>'+escapeHtml(ar?'تقدم المهام المجدولة':'Scheduled task progress')+'</span><span id="__dalil_overlay_percent">'+progress+'%</span></div>'+
       '<div id="__dalil_overlay_detail" style="border-top:1px solid #31485d;padding-top:8px;margin-top:8px">'+escapeHtml(ar?'جار تحميل نتائج الخلية…':'Loading cell results…')+'</div>';
+    positionOverlay(panel);
+  }
+  function positionOverlay(panel){
+    const p=overlayPosition||{left:16,top:16};
+    const rect=panel.getBoundingClientRect();
+    panel.style.left=Math.max(8,Math.min(Number(p.left)||16,window.innerWidth-rect.width-8))+'px';
+    panel.style.top=Math.max(8,Math.min(Number(p.top)||16,window.innerHeight-rect.height-8))+'px';
   }
   function updateOverlayStatus(text,success=true,phase="collecting"){
     const panel=document.getElementById('__gmaps_scraper_overlay');if(!panel)return;
     panel.style.borderColor=success?'#36c7e5':'#f7ae54';
     const detail=document.getElementById('__dalil_overlay_detail');if(detail)detail.textContent=String(text);
     const ar=uiLanguage!=='en';
-    const labels={collecting:ar?'جار البحث':'Searching',complete:ar?'انتهت قراءة الخلية':'Cell completed',confirmed_empty:ar?'انتهى الفحص · لا نتائج':'Checked · no results',partial:ar?'نتائج جزئية':'Partial results',capped:ar?'بلغ حد النتائج':'Result limit reached',unknown:ar?'نتائج غير محسومة':'Unverified result',paused:ar?'متوقف مؤقتًا':'Paused',stopped:ar?'توقفت المهمة':'Stopped'};
+    const labels={collecting:ar?'جار البحث':'Searching',complete:ar?'انتهت قراءة الخلية':'Cell completed',confirmed_empty:ar?'انتهى الفحص · لا نتائج':'Checked · no results',partial:ar?'نتائج جزئية':'Partial results',capped:ar?'بلغ حد النتائج':'Result limit reached',unknown:ar?'نتائج غير محسومة':'Unverified result',paused:ar?'متوقف مؤقتًا':'Paused',stopped:ar?'توقفت المهمة':'Stopped',completed:ar?'انتهى البحث المجدول':'Scheduled search finished'};
     const heading=document.getElementById('__dalil_overlay_phase');if(heading)heading.textContent=labels[phase]||labels.collecting;
-    if(['complete','confirmed_empty','partial','capped','unknown'].includes(phase)&&overlayContext){const c=overlayContext.cellInfo||{},cells=c.total||1;const progress=Math.round(((c.currentQueryIndex||0)*cells+(c.index||0)+1)/((c.totalQueries||1)*cells)*100);const bar=document.getElementById('__dalil_overlay_bar');if(bar)bar.style.width=progress+'%';const percent=document.getElementById('__dalil_overlay_percent');if(percent)percent.textContent=progress+'%';}
+    // Progress is committed by the worker, never inferred from a DOM scrape finishing.
 
   }
 
@@ -188,10 +353,7 @@
     await sleep(2200);
     verifyPreparedCamera();
 
-    // 2. النقر على "البحث في هذه المنطقة" إذا ظهر لتحديث نتائج الخلية
-    clickSearchThisAreaIfPresent();
-
-    // 3. التحقق مما إذا تحول الرابط تلقائياً إلى صفحة مكان واحد محدد (/maps/place/)
+    // 2. التحقق مما إذا تحول الرابط تلقائياً إلى صفحة مكان واحد محدد (/maps/place/)
     const singlePlace = checkSinglePlace(cellInfo);
     if (singlePlace) {
       return {
@@ -202,11 +364,8 @@
       };
     }
 
-    // 4. انتظار حاوية النتائج div[role="feed"] أو بطاقات المعالم بمهلة ذكية وتكيفية
+    // 3. انتظار حاوية النتائج div[role="feed"] أو بطاقات المعالم بمهلة ذكية وتكيفية
     const feed = await waitForFeed(12000);
-
-    // إعادة النقر على "البحث في هذه المنطقة" في حال ظهر بعد تحميل الخريطة
-    clickSearchThisAreaIfPresent();
 
     if (!feed) {
       // فحص أخير للتأكد من وجود مكان فردي أو بطاقات عامة
@@ -238,26 +397,56 @@
       };
     }
 
-    // 5. التجميع التدريجي المستمر (Progressive Harvesting) عبر خريطة هويات لمنع فقدان العناصر المعادة تدويرها في الـ DOM
-    const harvestedPlacesMap = new Map();
+    // 5. قد تُعاد الحاوية قبل رسم البطاقات؛ الانتظار يمنع نتيجة صفرية كاذبة.
+    //    خرائط Google تُكمل تحميل القائمة بعد اكتمال المستند، وأحيانًا بعد عشرات الثواني.
+    await waitForFirstCards(feed, 12000);
+    // البطاقات غائبة ولم يعلن Google الخلو: نطلب تحديث النتائج لهذه المنطقة مرة واحدة.
+    if(!feed.querySelector('a[href*="/maps/place/"], a.hfpxzc') && !hasExplicitNoResults() && clickSearchThisAreaIfPresent()){
+      await waitForFirstCards(feed, 10000);
+    }
+
+    // 5b. التجميع التدريجي المستمر (Progressive Harvesting) عبر خريطة هويات لمنع فقدان العناصر المعادة تدويرها في الـ DOM
+    const harvestedPlacesMap = currentScrapePlacesMap;
+    harvestedPlacesMap.clear();
 
     const harvestBatch = () => {
       const batch = extractPlacesFromFeed(feed, cellInfo);
       batch.forEach(p => {
-        const key = p.place_id || p.cid || p.id || (p.name + "_" + (p.x || 0) + "_" + (p.y || 0));
+        const key = p.place_id || p.cid || p.id || p.url || (p.name + "_" + (p.x ?? 'missing') + "_" + (p.y ?? 'missing'));
         if (!harvestedPlacesMap.has(key)) {
           harvestedPlacesMap.set(key, p);
         }
       });
       updateOverlayStatus(uiLanguage==='en'?`Loading results · ${harvestedPlacesMap.size} records observed`:`جار تحميل النتائج · رُصد ${harvestedPlacesMap.size} سجلًا`);
-      return harvestedPlacesMap.size;
+      // القائمة التي يعيدها Google ليست عن الخلية وحدها: يمزج فيها أماكن بعيدة.
+      // لذا ميزانية القراءة تُحسب بما وقع داخل الخلية، لا بكل ما رُصد. وإلا
+      // توقّف التمرير عند 120 بطاقة بعيدة قبل الوصول إلى معالم الخلية نفسها.
+      return countInCell();
+    };
+
+    const countInCell = () => {
+      const bounds = cellInfo && (cellInfo.bounds || cellInfo.studyAreaBounds);
+      if (!bounds) return harvestedPlacesMap.size;
+      let count = 0;
+      harvestedPlacesMap.forEach(p => {
+        if (p.x != null && p.y != null && isWithinCellBounds(p.x, p.y, bounds, 0)) count++;
+      });
+      return count;
     };
 
     // 6. التمرير الذكي الاهتزازي لقائمة النتائج مع التجميع عند كل دورة
-    const completeness = await smartAutoScrollFeed(feed, maxItems, scrollDelay, cellInfo, harvestBatch);
+    // Capture DOM batches that appear and disappear between scroll ticks.
+    // كل طفرة DOM تستدعي harvestBatch كاملة كانت تُجمّد الصفحة؛ نجمع الطفرات في دفعة واحدة.
+    let harvestScheduled=false;
+    const scheduleHarvest=()=>{if(harvestScheduled)return;harvestScheduled=true;setTimeout(()=>{harvestScheduled=false;harvestBatch();},250);};
+    const observer=typeof MutationObserver==='function'?new MutationObserver(scheduleHarvest):null;
+    observer?.observe(feed,{childList:true,subtree:true});
+    let completeness;
+    try{completeness=await smartAutoScrollFeed(feed, maxItems, scrollDelay, cellInfo, harvestBatch);}
+    finally{observer?.disconnect();}
     harvestBatch();
 
-    const items = Array.from(harvestedPlacesMap.values()).slice(0,maxItems);
+    const items = inCellFirst(Array.from(harvestedPlacesMap.values()), cellInfo).slice(0,maxItems);
     return {
       success: true,
       items,
@@ -426,16 +615,24 @@
   }
 
   function clickSearchThisAreaIfPresent() {
+    if(areaSearchClicked)return false;
     try {
       const buttons = document.querySelectorAll('button, div[role="button"]');
       for (const button of buttons) {
+        if(button.disabled||button.getAttribute('aria-hidden')==='true'||(button.getClientRects&&button.getClientRects().length===0))continue;
         if (button.getAttribute("jsaction")?.includes("search_this_area") || [button.textContent, button.getAttribute("aria-label")].some(value => matchesSourceSignal(value,'search'))) {
+          areaSearchClicked=true;
           button.click();
           return true;
         }
       }
     } catch (_) {}
     return false;
+  }
+
+  function hasLimitedView(){
+    const text=document.body?.innerText||'';
+    return /طريقة عرض محدودة من|(?:you['’]re|you are) (?:seeing|using) a limited view of google maps/i.test(text);
   }
 
   /**
@@ -575,9 +772,8 @@
       isApproxCoords = true;
     }
 
-    if (coords.x != null && coords.y != null && cellInfo && !isPlaceInStudyOrCell(coords.x, coords.y, cellInfo)) {
-      return null;
-    }
+    // الملكية النهائية تُقرَّر في background عبر findOwnerCell؛ لا نُسقط السجل هنا
+    // حتى يظهر عدّاد outsideCount الحقيقي بدل خسارة صامتة.
 
     let category = "";
     const catEl = document.querySelector('button[jsaction*="category"], button.DkEaL, span[class*="fontBodyMedium"]');
@@ -681,16 +877,16 @@
   }
 
   /**
-   * انتظار ظهور حاوية النتائج div[role="feed"] بمهلة تكيفية
+   * انتظار ظهور حاوية النتائج div[role="feed"] بمهلة تكيفية متوازنة وسريعة
    */
-  function waitForFeed(timeoutMs = 12000) {
+  function waitForFeed(timeoutMs = 5000) {
     const token=activeTask;
     return new Promise((resolve,reject) => {
       const startTime = Date.now();
       const check = () => {
         try{assertActive(token);}catch(error){reject(error);return;}
         // محاولة دورية للنقر على زر "البحث في هذه المنطقة" في حال ظهر متأخراً
-        clickSearchThisAreaIfPresent();
+        if(clickSearchThisAreaIfPresent()){setTimeout(check,500);return;}
 
         const feed = document.querySelector('div[role="feed"]');
         if (feed) {
@@ -698,15 +894,9 @@
           return;
         }
 
-        const cards = document.querySelectorAll('a[href*="/maps/place/"], a.hfpxzc, div.Nv2PK');
-        if (cards.length > 0) {
-          resolve(cards[0].closest('div[role="region"]') || cards[0].parentElement || document.body);
-          return;
-        }
-
         const elapsed = Date.now() - startTime;
-        // لا نحكم بالخلو إلا بعد مرور 4.5 ثانية على الأقل لضمان اكتمال استجابة الشبكة لخرائط جوجل
-        if (elapsed > 4500 && hasExplicitNoResults()) {
+        // إنهاء سريع وذكي للخلايا الخالية فور تأكيد جوجل (سرعة استجابة متوازنة دون تعليق)
+        if (elapsed > 1800 && hasExplicitNoResults()) {
           resolve(null);
           return;
         }
@@ -715,7 +905,25 @@
           resolve(null);
           return;
         }
-        setTimeout(check, 350);
+        setTimeout(check, 250);
+      };
+      check();
+    });
+  }
+
+  /**
+   * Google قد يعيد حاوية النتائج قبل رسم البطاقات فعلًا (SPA). الانتظار القصير
+   * يمنع «0 سجل» الكاذب بدل إعلان خلية فارغة قبل أن تُرسم.
+   */
+  function waitForFirstCards(feed, timeoutMs = 7000) {
+    const token = activeTask;
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const check = () => {
+        try { assertActive(token); } catch (_) { resolve(false); return; }
+        if (feed.querySelector('a[href*="/maps/place/"], a.hfpxzc, div.Nv2PK')) { resolve(true); return; }
+        if (hasExplicitNoResults() || Date.now() - start >= timeoutMs) { resolve(false); return; }
+        setTimeout(check, 300);
       };
       check();
     });
@@ -725,10 +933,13 @@
    * التمرير التلقائي الذكي مع حركة اهتزازية وتقنية scrollIntoView والتجميع التدريجي لمنع فقدان البيانات الافتراضية
    */
   async function smartAutoScrollFeed(feed, maxItems, delay, cellInfo = null, onHarvestBatch = null) {
-    let lastItemsCount = 0;
+    let lastItemsCount = -1;
+    let lastHeight = -1;
+    const observedLinks=new Set();
     let unchangedAttempts = 0;
     let scrolls = 0;
-    const maxScrollAttempts = Math.ceil(maxItems / 6) + 12;
+    // التمرير يتوقف عند استقرار القائمة؛ هذا الحد احتياطي فقط (كان 120 محاولة × 1.1 ث).
+    const maxScrollAttempts = Math.min(120, Math.max(24, Math.ceil(maxItems / 2) + 12));
     let completenessStatus = "partial";
 
     // تجميع أولي فوري قبل بدء التمرير
@@ -738,11 +949,11 @@
       assertActive();
       scrolls++;
 
-      feed.scrollTop = feed.scrollHeight;
+      feed.scrollTop = Math.min(feed.scrollHeight,feed.scrollTop+Math.max(200,(feed.clientHeight||600)*0.8));
       feed.dispatchEvent(new Event("scroll", { bubbles: true }));
 
       // استدعاء scrollIntoView للطرف الأخير لتحفيز الـ IntersectionObserver في خرائط جوجل
-      if (feed.lastElementChild) {
+      if (feed.lastElementChild && feed.scrollTop+(feed.clientHeight||600)>=feed.scrollHeight-10) {
         try {
           feed.lastElementChild.scrollIntoView({ behavior: "instant", block: "end" });
         } catch (e) {}
@@ -760,15 +971,16 @@
       }
 
       const currentLinks = feed.querySelectorAll('a[href*="/maps/place/"], a.hfpxzc');
-      const count = currentLinks.length;
+      currentLinks.forEach(link=>observedLinks.add(link.href));
+      const count = Math.max(observedLinks.size,onHarvestBatch?onHarvestBatch():0);
 
-      const endMarker = feed.querySelector('span.HlvSq, div.HlvSq, div[class*="fontBodyMedium"]:last-child');
-      if (endMarker && !endMarker.closest?.('div.Nv2PK, div[role="article"], a[href*="/maps/place/"]') && matchesSourceSignal(endMarker.textContent, "end")) {
+      const endMarkers = feed.querySelectorAll('span.HlvSq, div.HlvSq, div[class*="fontBodyMedium"]:last-child');
+      if (Array.from(endMarkers).some(marker=>!marker.closest?.('div.Nv2PK, div[role="article"], a[href*="/maps/place/"]') && matchesSourceSignal(marker.textContent, "end"))) {
         completenessStatus = "complete";
         break;
       }
 
-      if (count === lastItemsCount) {
+      if (count === lastItemsCount && feed.scrollHeight===lastHeight) {
         unchangedAttempts++;
 
         feed.scrollTop = Math.max(0, feed.scrollHeight - 70);
@@ -779,7 +991,6 @@
         feed.dispatchEvent(new Event("scroll", { bubbles: true }));
         await sleep(delay);
 
-        clickSearchThisAreaIfPresent();
         if (onHarvestBatch) onHarvestBatch();
 
         if (unchangedAttempts >= 4) {
@@ -788,6 +999,7 @@
       } else {
         unchangedAttempts = 0;
         lastItemsCount = count;
+        lastHeight = feed.scrollHeight;
       }
     }
 
@@ -836,20 +1048,20 @@
 
         // 1. استخراج الإحداثيات الفعلية للفرع من الرابط (!3d[lat] و !4d[lng])
         let coords = extractCoordinatesFromUrl(href);
-        if (!coords && card) {
+        if ((!coords || !coords.hasExactCoords) && card) {
           const subLinks = card.querySelectorAll('a[href*="!3d"]');
           for (const sLink of subLinks) {
             coords = extractCoordinatesFromUrl(sLink.href);
-            if (coords) break;
+            if (coords?.hasExactCoords) break;
           }
         }
 
         // 1b. محاولة إضافية: استخراج من data-url أو أي رابط آخر على البطاقة
-        if (!coords && card) {
+        if ((!coords || !coords.hasExactCoords) && card) {
           const dataUrl = card.getAttribute('data-url') || card.querySelector('[data-url]')?.getAttribute('data-url');
           if (dataUrl) coords = extractCoordinatesFromUrl(dataUrl);
         }
-        if (!coords && card) {
+        if ((!coords || !coords.hasExactCoords) && card) {
           const allAnchors = card.querySelectorAll('a[href*="maps"]');
           for (const a of allAnchors) {
             coords = extractCoordinatesFromUrl(a.href);
@@ -872,10 +1084,7 @@
           coordsApproximate = true;
         }
 
-        // 2. الفحص المكاني الصارم: التحقق من نطاق منطقة الدراسة
-        if (coords.x != null && coords.y != null && cellInfo && !isPlaceInStudyOrCell(coords.x, coords.y, cellInfo)) {
-          return;
-        }
+        // 2. الملكية تُقرَّر في background (findOwnerCell) ويُسجَّل outsideCount هناك.
 
         // 3. استخراج التقييم والمراجعات مع معالجة الأرقام المشرقية
         const { rating, reviewsCount, ratingRaw, reviewsCountRaw, sourceLocale, reviewsCountApproximate } = extractRatingMetrics(card);
@@ -1062,9 +1271,7 @@
         };
       }
 
-      if (coords.x != null && coords.y != null && cellInfo && !isPlaceInStudyOrCell(coords.x, coords.y, cellInfo)) {
-        return;
-      }
+      // الملكية تُقرَّر في background؛ لا إسقاط صامت هنا.
 
       const { placeId, cid } = extractPlaceIdAndCid(link.href);
       const localIdentity=generatePlaceId(name,coords.x,coords.y,cid,placeId) + (!cid && !placeId && !coords.hasExactCoords ? '|' + link.href : '');
@@ -1263,6 +1470,22 @@
   }
 
   /**
+   * يقدّم الملاحظات الواقعة داخل الخلية على غيرها قبل اقتطاعها بعدد ثابت.
+   * Google يمزج أماكن بعيدة في القائمة نفسها؛ الاقتطاع بترتيب الظهور كان يحذف
+   * معالم الخلية إذا جاءت بعد البعيدة، فتُحفظ «صفرًا» ويظن المستخدم أن الخلية خالية.
+   */
+  function inCellFirst(values, cellInfo) {
+    const bounds = cellInfo && (cellInfo.bounds || cellInfo.studyAreaBounds);
+    if (!bounds || !Array.isArray(values)) return Array.isArray(values) ? values.slice() : [];
+    const inside = [], outside = [];
+    for (const item of values) {
+      const known = item && item.x != null && item.y != null && Number.isFinite(Number(item.x)) && Number.isFinite(Number(item.y));
+      (known && isWithinCellBounds(Number(item.x), Number(item.y), bounds, 0) ? inside : outside).push(item);
+    }
+    return inside.concat(outside);
+  }
+
+  /**
    * إنشاء معرف فريد قياسي يمنع التكرار (يعتمد على CID أو Place ID الحقيقي إن وُجد)
    */
   function generatePlaceId(name, x, y, cid = "", placeId = "") {
@@ -1294,10 +1517,10 @@
       extractCoordinatesFromUrl,
       isPlaceInStudyOrCell,
       generatePlaceId,
-      cleanWebsiteUrl, detectSourceBlock, hasExplicitNoResults, scrapeGoogleMaps, isWithinCellBounds,
+      cleanWebsiteUrl, detectSourceBlock, hasExplicitNoResults, scrapeGoogleMaps, isWithinCellBounds, inCellFirst,
       normalizeArabicNumerals, pageLocale, parseSourceNumber, parseRatingText, parseReviewText,
       matchesSourceSignal, fieldLabelMatches, findLabeledElement, hasHoursText, extractRatingMetrics,
-      checkSinglePlace, extractPlacesFromFeed, extractCardsFromDocument, clickSearchThisAreaIfPresent, smartAutoScrollFeed
+      checkSinglePlace, extractPlacesFromFeed, extractCardsFromDocument, clickSearchThisAreaIfPresent, hasLimitedView, smartAutoScrollFeed
     };
   }
 })();

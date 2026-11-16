@@ -305,7 +305,13 @@ const ExportUtils = {
       worker.onmessage = event => {
         if (event.data?.requestId !== requestId) return;
         cleanup();
-        if (!event.data.success) { reject(new Error(event.data.error)); return; }
+        if (!event.data.success) {
+          const failure = new Error(event.data.error);
+          failure.code = event.data.errorCode || 'EXPORT_FAILED';
+          failure.details = event.data.details || null;
+          reject(failure);
+          return;
+        }
         for (const file of event.data.files) this.downloadBlob(new Blob([file.bytes], { type: file.type }), file.name);
         resolve({ files: event.data.files.map(file => file.name) });
       };
@@ -320,8 +326,8 @@ const ExportUtils = {
 
   messages(options) {
     return this.exportLanguage(options) === 'en'
-      ? { empty: 'No reusable records are available for export.', unnamed: 'Unnamed place', general: 'Unclassified', places: 'Places', metadata: 'Metadata', fields: 'Fields', coverage: 'Source Coverage', unlocated: 'Unlocated', warning: 'Source rights are unspecified for imported legacy records; verify them before reuse.', description: 'DALIL spatial records. Source rights and coordinate verification are recorded in the metadata.' }
-      : { empty: 'لا توجد سجلات متاحة ومسموح بإعادة استخدامها للتصدير.', unnamed: 'مكان بلا اسم', general: 'غير مصنف', places: 'الأماكن', metadata: 'البيانات الوصفية', fields: 'الحقول', coverage: 'تغطية المصادر', unlocated: 'بلا إحداثيات موثقة', warning: 'حقوق المصدر غير محددة للسجلات القديمة المستوردة؛ تحقق منها قبل إعادة الاستخدام.', description: 'سجلات مكانية من دليل. تُوثّق حقوق المصدر والتحقق من الإحداثيات في البيانات الوصفية.' };
+      ? { empty: 'No reusable records are available for export.', restricted: 'records were excluded because their source license does not permit bulk export', unnamed: 'Unnamed place', general: 'Unclassified', places: 'Places', metadata: 'Metadata', fields: 'Fields', coverage: 'Source Coverage', unlocated: 'Unlocated', warning: 'Source rights are unspecified for imported legacy records; verify them before reuse.', description: 'DALIL spatial records. Source rights and coordinate verification are recorded in the metadata.' }
+      : { empty: 'لا توجد سجلات متاحة ومسموح بإعادة استخدامها للتصدير.', restricted: 'سجلًا مستبعدًا لأن ترخيص المصدر لا يسمح بالتصدير المجمّع', unnamed: 'مكان بلا اسم', general: 'غير مصنف', places: 'الأماكن', metadata: 'البيانات الوصفية', fields: 'الحقول', coverage: 'تغطية المصادر', unlocated: 'بلا إحداثيات موثقة', warning: 'حقوق المصدر غير محددة للسجلات القديمة المستوردة؛ تحقق منها قبل إعادة الاستخدام.', description: 'سجلات مكانية من دليل. تُوثّق حقوق المصدر والتحقق من الإحداثيات في البيانات الوصفية.' };
   },
 
   numberOrEmpty(value, precision = null) {
@@ -506,8 +512,24 @@ const ExportUtils = {
   requireExportRecords(results, categoryFilter, options) {
     const selected = this.selectExportRecords(results, categoryFilter);
     if (selected.included.length) return selected;
-    if (typeof alert === 'function') alert(this.messages(options).empty);
+    if (typeof alert === 'function') alert(this.restrictionReport(results, categoryFilter, options));
     return null;
+  },
+
+  // ملخص صريح لسبب منع التصدير: يعرض عدد السجلات المقيّدة بدل رسالة غامضة.
+  restrictionReport(results, categoryFilter = null, options = {}) {
+    const messages = this.messages(options);
+    const availability = this.exportAvailability(results, categoryFilter);
+    if (!availability.restricted) return messages.empty;
+    const reasons = Object.keys(availability.reasons).join(', ');
+    return messages.empty + ' ' + availability.restricted + ' ' + messages.restricted + ' (' + reasons + ')';
+  },
+
+  exportAvailability(results, categoryFilter = null) {
+    const selection = this.selectExportRecords(results, categoryFilter);
+    const reasons = {};
+    for (const row of selection.excluded) reasons[row.reason] = (reasons[row.reason] || 0) + 1;
+    return { total: (results || []).length, exportable: selection.included.length, restricted: selection.excluded.length, reasons };
   },
 
   async exportToKml(results, filenamePrefix = 'dalil_spatial_survey', categoryFilter = null, options = {}) {

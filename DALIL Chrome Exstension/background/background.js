@@ -6,8 +6,7 @@
 
 // استيراد محرك التصنيفات والقاموس والشبكات الجغرافية ودوال الفحص والتحليل المكاني
 try {
-  importScripts("../core/quick-library.js");
-  importScripts("../core/category-registry.js", "../core/search-languages.js", "../lib/taxonomy-engine.js", "../lib/smart-brands.js", "../core/symbology.js", "../lib/export-utils.js", "../lib/spatial-utils.js", "../core/workspace-state.js", "../core/records.js", "../core/source-adapters.js", "../core/search-navigation.js", "grid-presets.js");
+  importScripts("../core/category-registry.js", "../core/search-languages.js", "../lib/taxonomy-engine.js", "../lib/smart-brands.js", "../core/symbology.js", "../lib/export-utils.js", "../lib/spatial-utils.js", "../core/workspace-state.js", "../core/records.js", "../core/source-adapters.js", "../core/search-navigation.js", "../core/result-store.js", "../core/scan-diagnostics.js", "grid-presets.js");
 } catch (e) {
   console.warn("importScripts fallback:", e);
 }
@@ -24,8 +23,9 @@ const QUEUE_ALARM = 'dalil-queue-checkpoint';
 
 async function closeWorkerTab() {
   const tabId = scraperState.workerTabId;
+  scraperState.workerTabId = null;
+  scraperState.workerTabCellId = null;
   if (tabId) {
-    scraperState.workerTabId = null;
     try {
       await chrome.tabs.remove(tabId);
     } catch (e) {}
@@ -54,13 +54,21 @@ let scraperState = {
   workerTabId: null
 };
 
+// بصمة مستند الصفحة الذي قرأناه آخر مرة في تبويب البحث. نفس البصمة = الصفحة لم تُحمَّل.
+let activeTabDocumentId = null;
+
 // استعادة الحالة المحفوظة عند بدء التشغيل
-const stateReady = new Promise((resolve) => chrome.storage.local.get(["scraperState", "workspaceState", "savedStudyArea", "savedCells"], (data) => {
-  if (chrome.runtime.lastError) {
-    scraperState.lastError = { code: 'STORAGE_READ_FAILED', message: chrome.runtime.lastError.message };
-    resolve();
-    return;
-  }
+const stateReady = (async () => {
+  const data = await new Promise(resolve => {
+    chrome.storage.local.get(["scraperState", "workspaceState", "savedStudyArea", "savedCells"], result => {
+      if (chrome.runtime.lastError) {
+        scraperState.lastError = { code: 'STORAGE_READ_FAILED', message: chrome.runtime.lastError.message };
+        resolve({});
+        return;
+      }
+      resolve(result || {});
+    });
+  });
   if (typeof WorkspaceState !== 'undefined') workspaceState = WorkspaceState.fromStorage(data);
   if (data.scraperState) {
     scraperState = {
@@ -76,6 +84,15 @@ const stateReady = new Promise((resolve) => chrome.storage.local.get(["scraperSt
     }
   }
 
+  // النتائج الكبيرة تُقرأ من IndexedDB بدل chrome.storage.local.
+  if (scraperState.resultsStoredExternally) {
+    let stored = null;
+    if (typeof ResultStore !== 'undefined' && ResultStore.available()) stored = await ResultStore.load();
+    if (Array.isArray(stored)) scraperState.results = stored;
+    else scraperState.lastError = { code: 'RESULT_STORE_READ_FAILED', message: 'Stored survey records could not be restored; the saved index is unchanged.' };
+  }
+  delete scraperState.resultsStoredExternally;
+
   // لا نقوم بفرض أي شبكة افتراضية على المستخدم - الخريطة تفتح نظيفة بانتظار رفع ملف منطقة الدراسة أو رسمها
   if (scraperState.status === "idle" && !scraperState.cells) {
     scraperState.cells = [];
@@ -84,10 +101,43 @@ const stateReady = new Promise((resolve) => chrome.storage.local.get(["scraperSt
     saveState();
   }
   if (typeof PlaceRecords !== 'undefined') recordIndex = new PlaceRecords.RecordIndex(scraperState.results);
-  resolve();
-}));
+})();
+
+// عند إعادة تشغيل المتصفح: تُستأنف الجلسة السابقة بدل حذفها.
+// تُصفَّر الحالات العابرة فقط (التبويب العامل، الاستعلام النشط، المؤقتات)،
+// بينما تبقى النتائج والفهارس ومواضع الخلايا محفوظة لضمان عدم فقدان أي معلم.
+if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onStartup) {
+  chrome.runtime.onStartup.addListener(async () => {
+    await stateReady;
+    const preservedResults = Array.isArray(scraperState.results) ? scraperState.results : [];
+    scraperState.status = "idle";
+    scraperState.workerTabId = null;
+    scraperState.activeQueryText = "";
+    scraperState.nextRunAt = null;
+    scraperState.notBefore = null;
+    scraperState.pauseReason = null;
+    scraperState.lastError = null;
+    if (!(scraperState.seenIds instanceof Set)) scraperState.seenIds = new Set(scraperState.seenIds || []);
+    scraperState.stats = {
+      ...(scraperState.stats || {}),
+      totalCells: scraperState.cells?.length || 0,
+      completedCells: (scraperState.cells || []).filter(cell => ['complete', 'done', 'partial', 'confirmed_empty', 'verified_empty'].includes(cell.status)).length,
+      itemsFound: preservedResults.length,
+      startTime: null,
+      endTime: null
+    };
+    if (typeof PlaceRecords !== "undefined") recordIndex = new PlaceRecords.RecordIndex(preservedResults);
+    await saveState(true);
+    broadcastUpdate();
+  });
+}
 
 let saveStateTimer = null;
+let persistedResultsRevision = -1;
+const RESULT_STORE_THRESHOLD = 2000;
+function useExternalResultStore() {
+  return typeof ResultStore !== 'undefined' && ResultStore.available() && scraperState.results.length > RESULT_STORE_THRESHOLD;
+}
 function saveState(immediate = false) {
   if (immediate) {
     if (saveStateTimer) {
@@ -104,11 +154,30 @@ function saveState(immediate = false) {
 }
 
 function doSaveState() {
+  const external = useExternalResultStore();
   const serialized = JSON.parse(JSON.stringify({
     ...scraperState,
     seenIds: Array.from(scraperState.seenIds)
   }));
-  const write = storageWrite.catch(() => {}).then(() => chrome.storage.local.set({ scraperState: serialized }));
+  if (external) {
+    delete serialized.results;
+    serialized.resultsStoredExternally = true;
+  } else {
+    serialized.resultsStoredExternally = false;
+    persistedResultsRevision = -1;
+  }
+  const write = storageWrite.catch(() => {}).then(async () => {
+    await chrome.storage.local.set({ scraperState: serialized });
+    if (!external || persistedResultsRevision === scraperState.resultsRevision) return;
+    persistedResultsRevision = scraperState.resultsRevision;
+    const stored = await ResultStore.save(scraperState.results);
+    if (stored) return;
+    // تراجع آمن: إذا فشل IndexedDB نكتب السجلات كاملة بدل فقدانها.
+    persistedResultsRevision = -1;
+    const fallback = { ...serialized, results: JSON.parse(JSON.stringify(scraperState.results)) };
+    delete fallback.resultsStoredExternally;
+    await chrome.storage.local.set({ scraperState: fallback });
+  });
   storageWrite = write;
   write.catch(error => {
     scraperState.status = 'paused';
@@ -145,6 +214,16 @@ if (chrome.alarms?.onAlarm) chrome.alarms.onAlarm.addListener(async alarm => {
   if (scraperState.status === 'running') scheduleQueue(Math.max(0,(scraperState.nextRunAt||0)-Date.now()));
 });
 
+chrome.tabs.onRemoved?.addListener(async tabId=>{
+  await stateReady;
+  if(tabId!==scraperState.workerTabId)return;
+  scraperState.workerTabId=null;
+  if(scraperState.status==='running'){
+    scraperState.status='paused';scraperState.pauseReason='WORKER_TAB_CLOSED';
+    cancelActiveWork();await saveState(true);broadcastUpdate();
+  }
+});
+
 function getStatusSnapshot(includeResults = false) {
   return {success:true, status:scraperState.status, jobId:scraperState.jobId, config:scraperState.config,
     currentIndex:scraperState.currentIndex, currentQueryIndex:scraperState.currentQueryIndex||0,
@@ -152,7 +231,8 @@ function getStatusSnapshot(includeResults = false) {
     queryStats:scraperState.queryStats||{},activeQueryText:scraperState.activeQueryText,stats:scraperState.stats,
     resultsCount:scraperState.results.length,resultsRevision:scraperState.resultsRevision||0, ...(includeResults ? {results:scraperState.results} : {}),
     recentResults:scraperState.results.slice(-15).reverse(),currentCell:scraperState.cells[scraperState.currentIndex]||null,
-    lastError:scraperState.lastError||null,pauseReason:scraperState.pauseReason||null,notBefore:scraperState.notBefore||null,navigationEvidence:scraperState.navigationEvidence||null};
+    lastError:scraperState.lastError||null,pauseReason:scraperState.pauseReason||null,notBefore:scraperState.notBefore||null,navigationEvidence:scraperState.navigationEvidence||null,
+    lastScanDiagnosis:scraperState.lastScanDiagnosis||null};
 }
 
 async function applyWorkspaceAction(request) {
@@ -170,9 +250,12 @@ async function applyWorkspaceAction(request) {
     stats:{...scraperState.stats,totalCells:next.cells.length,completedCells:0,
       ...(reset?{itemsFound:0,duplicatesSkipped:0,startTime:null,endTime:null}:{})}};
   // One storage.set commits both canonical and legacy keys, including explicit empty values.
-  storageWrite=storageWrite.catch(()=>{}).then(()=>chrome.storage.local.set({workspaceState:next, savedStudyArea:area, savedCells:next.cells,
-    scraperState:{...candidate,seenIds:Array.from(candidate.seenIds)},
-    ...(reset?{savedTargetPhenomena:[],savedConfig:null}:{})}));
+  storageWrite=storageWrite.catch(()=>{}).then(async()=>{
+    await chrome.storage.local.set({workspaceState:next, savedStudyArea:area, savedCells:next.cells,
+      scraperState:{...candidate,seenIds:Array.from(candidate.seenIds)},
+      ...(reset?{savedPhenomena:[],savedConfig:null}:{})});
+    if(reset&&typeof ResultStore!=='undefined'&&ResultStore.available()){persistedResultsRevision=-1;await ResultStore.clear();}
+  });
   try{await storageWrite;}catch(error){throw Object.assign(new Error('Workspace could not be saved; the previous workspace is retained.'),{code:'STORAGE_WRITE_FAILED'});}
   cancelActiveWork();
   scraperState=candidate;
@@ -199,6 +282,7 @@ if (chrome.action && chrome.action.onClicked) {
 
 // إدارة قنوات الاتصال النشطة (Port-based Keepalive) لضمان استمرار عمل الـ Service Worker
 const activePorts = new Set();
+stateReady.then(()=>broadcastUpdate());
 
 if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onConnect) {
   chrome.runtime.onConnect.addListener((port) => {
@@ -482,12 +566,14 @@ async function startScraping(config) {
   const initialFound = shouldClear ? 0 : initialResults.length;
   const resultsRevision=(scraperState.resultsRevision||0)+(shouldClear?1:0);
 
-  if (shouldClear) {
-    cells.forEach((c) => {
-      c.status = "pending";
-      c.itemsFound = 0;
-      c.statusByQuery = {};
-    });
+  // Every new job has its own survey state, even when retaining previous records.
+  cells=cells.map(c=>({...c,status:'pending',itemsFound:0,statusByQuery:{}}));
+  if (!shouldClear) {
+    for(const item of initialResults){
+      if(!PlaceRecords.hasGeometry(item))continue;
+      const owner=SpatialUtils.findOwnerCell(item.x,item.y,cells);
+      if(owner)owner.itemsFound++;
+    }
   }
 
   const studyAreaBounds = calculateOverallBounds(cells, config.customBounds);
@@ -526,8 +612,10 @@ async function startScraping(config) {
       startTime: Date.now(),
       endTime: null
     },
-    workerTabId: null
+    workerTabId: null,
+    workerTabCellId: null
   };
+  activeTabDocumentId = null;
   recordIndex=new PlaceRecords.RecordIndex(initialResults);
   await saveState(true);
   if (epoch!==operationEpoch || scraperState.status!=='running') return;
@@ -559,25 +647,63 @@ function calculateOverallBounds(cells, customBounds) {
  * حساب دقيق وتكيفي لمستوى التقريب (Zoom Level) المناسب لأبعاد الخلية
  * يدعم كافة مستويات التقريب من 12 وحتى المستوى التفصيلي الدقيق 19z و 20z
  */
-function resolveCellZoom(cell, configZoom) {
-  if (configZoom && configZoom !== "auto" && !isNaN(parseInt(configZoom))) {
-    return Math.min(20, Math.max(12, parseInt(configZoom)));
-  }
-  if (cell && cell.bounds) {
-    const latSpan = Math.abs(cell.bounds.maxLat - cell.bounds.minLat);
-    const lngSpan = Math.abs(cell.bounds.maxLng - cell.bounds.minLng);
-    const maxSpan = Math.max(latSpan, lngSpan);
-    if (maxSpan > 0.35) return 11;
-    if (maxSpan > 0.18) return 12;
-    if (maxSpan > 0.09) return 13;
-    if (maxSpan > 0.04) return 14;
-    if (maxSpan > 0.018) return 15;
-    if (maxSpan > 0.007) return 16;
-    if (maxSpan > 0.0025) return 17;
-    if (maxSpan > 0.001) return 18;
-    return 19; // مستوى تفصيلي عالي الدقة للبلوكات والمباني الفردية
-  }
-  return 15;
+/**
+ * حد «الحي الخطأ» لمركز كاميرا Google. الملكية تُقرَّر هندسيًا في findOwnerCell،
+ * لكن قراءة نتائج حيٍّ آخر تُنتج سجلات لا تنتمي للخلية. لذلك نطلب أن تكون الكاميرا
+ * فوق الخلية فعليًا: نصف أقصر ضلع، بحد أدنى 300 م وأقصى 2000 م.
+ * الحد السابق (3 كم) كان يسمح بقراءة الخلية المجاورة كلها.
+ */
+function cameraHardLimitMeters(cell) {
+  const b = cell && (cell.bounds || cell);
+  if (!b || b.minLat === undefined) return 600;
+  const midLat = (b.minLat + b.maxLat) / 2;
+  const height = Math.abs(b.maxLat - b.minLat) * 111320;
+  const width = Math.abs(b.maxLng - b.minLng) * 111320 * Math.cos(midLat * Math.PI / 180);
+  const shortest = Math.min(height, width);
+  return Math.round(Math.max(300, Math.min(2000, shortest * 0.5)));
+}
+
+/* آخر مقاس نافذة رُصد من صفحة بحث حقيقية. يُستخدم لحساب التكبير بدقة
+ * بدل تخمينه، لأن Google يقصر قائمة النتائج على ما تراه الخريطة. */
+let observedViewportPixels = null;
+
+/**
+ * التكبير يُحسب من مقاس النافذة الفعلي بحيث يحتوي عرض الخريطة الخلية كاملة.
+ * كان التكبير سابقًا يُختار من «أطول ضلع» فقط، فيكون العرض أضيق من الخلية،
+ * وتنتهي قائمة Google بـ«نهاية القائمة» قبل أن تُقرأ معالم ما زالت داخل الخلية.
+ * تكبير المستخدم يُحترم فقط إن بقي العرض محيطًا؛ وإلا يُخفَّض إلى حد التغطية.
+ */
+function resolveCellZoom(cell, configZoom, pixels = observedViewportPixels) {
+  const px = DalilSearchNavigation.pixelsOf(pixels || DalilSearchNavigation.DEFAULT_PIXELS);
+  const fit = cell && cell.bounds ? DalilSearchNavigation.zoomForBounds(cell.bounds, px, 1.06) : 16;
+  const requested = configZoom && configZoom !== "auto" && !isNaN(parseInt(configZoom)) ? parseInt(configZoom) : null;
+  return Math.max(10, Math.min(20, requested == null ? fit : Math.min(requested, fit)));
+}
+
+/**
+ * إثبات التغطية: هل عرض الخريطة الفعلي يحتوي نطاق الخلية كاملًا؟
+ * بلا هذا الإثبات لا يجوز وسم الخلية «مكتملة» ولو أعلن Google نهاية القائمة.
+ */
+function cellCoverage(cellLike, viewport, cameraLat, cameraLng) {
+  const bounds = cellLike && (cellLike.bounds || cellLike);
+  if (!bounds || bounds.minLat === undefined) return { covers: true, reason: 'no_bounds' };
+  const pixels = DalilSearchNavigation.pixelsOf(viewport?.pixels || observedViewportPixels || DalilSearchNavigation.DEFAULT_PIXELS);
+  const zoom = Number(viewport?.zoom);
+  const lat = Number.isFinite(Number(cameraLat)) ? Number(cameraLat) : Number(cellLike.centerLat);
+  const lng = Number.isFinite(Number(cameraLng)) ? Number(cameraLng) : Number(cellLike.centerLng);
+  const box = Number.isFinite(zoom) ? DalilSearchNavigation.viewportBox(lat, lng, pixels, zoom) : null;
+  if (!box) return { covers: false, reason: 'viewport_unknown', pixels, zoom: Number.isFinite(zoom) ? zoom : null };
+  const span = DalilSearchNavigation.spanMeters(bounds);
+  return {
+    covers: DalilSearchNavigation.covers(box, bounds, 25),
+    reason: 'measured',
+    zoom,
+    pixels,
+    viewportWidthMeters: Math.round(box.widthMeters),
+    viewportHeightMeters: Math.round(box.heightMeters),
+    cellWidthMeters: span ? Math.round(span.width) : null,
+    cellHeightMeters: span ? Math.round(span.height) : null
+  };
 }
 
 /**
@@ -601,7 +727,7 @@ function prepareQueriesList(config) {
       searchLanguage:config.searchLocale || 'ar',
       queryLanguage:config.searchLocale || 'ar',
       provider:config.provider||'google_maps_dom',queryTerms:config.queryTerms||{},fallbackLanguage:config.fallbackLanguage||null,additionalSearchLanguages:config.additionalSearchLanguages||[],
-      maxQueries: config.maxQueries || 8
+      maxQueries: config.maxQueries || 0
     });
 
     scraperState.queryPlan = plan;
@@ -704,6 +830,43 @@ async function processQueue() {
   }
 }
 
+// Refine discovery views without changing the user's grid or geometric ownership.
+// مبدأ «مشهد واحد لكل خلية»: لا نُقسّم إلا بدليل على وجود نتائج إضافية.
+// «capped» دليل صريح (المصدر أعاد السقف)، فيسمح بتحسين مزدوج (حتى 21 مشهدًا).
+// «partial»/«unknown» شكوك لا دليل، فلا تُقسَّم افتراضيًا؛ تُقسَّم فقط عند تشغيل
+// «التحسين العميق» صريحًا من المستخدم (عمق واحد = 5 مشاهدات).
+// A bounded tree (at most 21 views per cell/query) survives worker suspension.
+function refineSearchView(scan,outcome,config){
+  if(outcome==='confirmed_empty')return [];
+  const b=scan.bounds,lat=(b.minLat+b.maxLat)/2,lng=(b.minLng+b.maxLng)/2;
+  const span=Math.max(b.maxLat-b.minLat,(b.maxLng-b.minLng)*Math.cos(lat*Math.PI/180));
+  // تحت هذا الحجم لا يغيّر التقسيم ما يعرضه Google فعليًا، فيُهدر الوقت بلا فائدة.
+  if(span<0.002)return [];
+  const deepRefine=!!config?.deepRefine;
+  const provenMore=outcome==='capped';
+  const suspectedMore=outcome==='partial'||outcome==='unknown';
+  // دليل أن القائمة ليست عن هذه الخلية: بطاقات أُرجعت ولا واحدة داخل الخلية.
+  // التقسيم برفع التكبير يغيّر ما يعرضه Google فعلًا (دليل ميداني: 2 ← 5 داخل الخلية).
+  const notAboutCell=Number(scan.itemCount)>0 && Number(scan.inCellCount)===0;
+  if(!provenMore && !notAboutCell && !(deepRefine && suspectedMore))return [];
+  const maxDepth=provenMore?2:1;
+  if(scan.depth>=maxDepth)return [];
+  return [
+    {minLat:b.minLat,maxLat:lat,minLng:b.minLng,maxLng:lng},
+    {minLat:b.minLat,maxLat:lat,minLng:lng,maxLng:b.maxLng},
+    {minLat:lat,maxLat:b.maxLat,minLng:b.minLng,maxLng:lng},
+    {minLat:lat,maxLat:b.maxLat,minLng:lng,maxLng:b.maxLng}
+  ].map((bounds,i)=>({path:scan.path+'.'+i,depth:scan.depth+1,bounds,
+    centerLat:(bounds.minLat+bounds.maxLat)/2,centerLng:(bounds.minLng+bounds.maxLng)/2,status:'pending'}));
+}
+
+function searchViewOutcome(scans){
+  const leaves=scans.filter(scan=>!scan.refined).map(scan=>scan.status);
+  for(const status of ['error','unknown','capped','partial'])if(leaves.includes(status))return status;
+  if(leaves.every(status=>status==='confirmed_empty'))return scans.some(scan=>scan.newCount||scan.dupCount)?'partial':'confirmed_empty';
+  return 'complete';
+}
+
 async function processQueueStep() {
   const epoch = operationEpoch;
   const state = scraperState;
@@ -722,12 +885,16 @@ async function processQueueStep() {
     const qText=queriesToRun[qIdx];
     const plannedQuery=state.queryPlan?.queries?.[qIdx],taskLocale=plannedQuery?.lang||config.searchLocale||'ar',canonicalIds=plannedQuery?.canonicalIds||[];
     queryId=`Q${qIdx+1}`;
-    const identity={jobId:state.jobId,cellId:cell.id,queryId,areaVersion:state.areaVersion||0};
     const provider=SourceAdapters.get(config.provider || 'google_maps_dom');
     cell.status='processing';
     cell.statusByQuery=cell.statusByQuery || {};
+    const previous=cell.statusByQuery[queryId]||{};
+    const scans=previous.scans||[{path:'0',depth:0,bounds:cell.bounds,centerLat:cell.centerLat,centerLng:cell.centerLng,status:'pending'}];
+    const scanIndex=Math.max(0,scans.findIndex(scan=>scan.status==='pending'));
+    const scan=scans[scanIndex];
+    const identity={jobId:state.jobId,cellId:cell.id,queryId:scanIndex?queryId+'.S'+scanIndex:queryId,areaVersion:state.areaVersion||0};
     const attempt=(cell.statusByQuery[queryId]?.attempt || 0)+1;
-    cell.statusByQuery[queryId]={status:'running',attempt,startedAt:Date.now(),identity};
+    cell.statusByQuery[queryId]={...previous,status:'running',attempt,startedAt:Date.now(),identity,scans};
     state.activeQueryText=qText;
     state.navigationEvidence=null;
     state.checkpoint={...identity,queryIndex:qIdx,cellIndex:cIdx,phase:'before_request',attempt};
@@ -768,26 +935,105 @@ async function processQueueStep() {
       if(waitMs>0){cell.status='pending';cell.statusByQuery[queryId]={...cell.statusByQuery[queryId],status:'pending',attempt:Math.max(0,attempt-1),waitUntil:Date.now()+waitMs};scheduleAfter=waitMs;return;}
       await chrome.storage.local.set({googleLastRequestedAt:Date.now()});
       if(!live())return;
-      await ensureWorkerTab();
+      const searchCell={...cell,...scan};
+      const hardLimit=cameraHardLimitMeters(cell);
+      // لا نبدأ الجمع إلا بعد أن تكون الصفحة صفحة هذه الخلية وكاميرتها فوقها.
+      const preparePage=async(zoom)=>{
+        const targetUrl=buildMapsSearchUrl(qText,searchCell,zoom,taskLocale,identity);
+        const navigated=await navigateTabAndWait(state.workerTabId,targetUrl,45000,hardLimit);
+        if(!live())return null;
+        if(!navigated)return {success:false,errorCode:'NAVIGATION_FAILED'};
+        const answer=await sendTabMessageWithRetry(state.workerTabId,{action:'PREPARE_TASK',task:identity,targetUrl,query:qText,
+          hardCameraLimitMeters:hardLimit,zoom});
+        if(!live())return null;
+        // نفس بصمة المستند = الصفحة السابقة لم تُستبدل، فلا نقرأ نتائجها.
+        if(answer?.success && answer.documentId && answer.documentId===activeTabDocumentId)return {success:false,errorCode:'STALE_DOCUMENT'};
+        if(answer?.success && answer.documentId)activeTabDocumentId=answer.documentId;
+        if(answer?.viewport?.pixels)observedViewportPixels=answer.viewport.pixels;
+        if(answer?.success){
+          // الملكية هندسية، لكن «الاكتمال» يحتاج إثبات أن العرض يحتوي الخلية كلها.
+          answer.coverage=cellCoverage(searchCell,answer.viewport||{zoom},answer.view?.observed?.lat,answer.view?.observed?.lng);
+        }
+        return answer;
+      };
+      let zoom=resolveCellZoom(searchCell,scan.depth?'auto':config.zoom);
+      await ensureWorkerTab(cell.id);
       if(!live())return;
-      const targetUrl=buildMapsSearchUrl(qText,cell,resolveCellZoom(cell,config.zoom),taskLocale,identity);
-      const navigated=await navigateTabAndWait(state.workerTabId,targetUrl);
+      let ready=await preparePage(zoom);
       if(!live())return;
-      if(!navigated)throw new SourceAdapters.SourceError('NAVIGATION_FAILED');
-      const ready=await sendTabMessageWithRetry(state.workerTabId,{action:'PREPARE_TASK',task:identity,targetUrl,query:qText});
-      if(!live())return;
+      // صفحة مستقلة لكل خلية: عند أي شك نفتح صفحة نظيفة بدل قراءة صفحة سابقة.
+      if(!ready?.success && ['STALE_DOCUMENT','NAVIGATION_VIEW_MISMATCH','CAMERA_NOT_AT_CELL','STALE_PAGE','NAVIGATION_FAILED'].includes(ready?.errorCode)){
+        await closeWorkerTab();
+        if(!live())return;
+        await ensureWorkerTab(cell.id);
+        if(!live())return;
+        ready=await preparePage(zoom);
+        if(!live())return;
+      }
+      // العرض أضيق من الخلية: نعيد التوجيه مرة واحدة بتكبير يغطيها بدل قراءة جزء منها.
+      if(ready?.success && ready.coverage && ready.coverage.covers===false){
+        const corrected=resolveCellZoom(searchCell,'auto',ready.viewport?.pixels);
+        if(corrected<zoom){
+          zoom=corrected;
+          ready=await preparePage(zoom);
+          if(!live())return;
+        }
+      }
       if(!ready?.success || JSON.stringify(ready.task)!==JSON.stringify(identity))throw new SourceAdapters.SourceError(ready?.errorCode||'STALE_PAGE');
-      if(!ready.view?.verified)throw new SourceAdapters.SourceError('NAVIGATION_VIEW_MISMATCH');
-      state.navigationEvidence={task:identity,...ready.view,checkedAt:new Date().toISOString()};
-      response=await sendTabMessageWithRetry(state.workerTabId,{action:'SCRAPE_PAGE',task:identity,query:qText,
+      // التحقق الصارم من نص البحث يبقى شرطًا: بدونه قد تُنسب نتائج استعلام آخر للخلية.
+      if(!ready.view?.queryVerified)throw new SourceAdapters.SourceError('NAVIGATION_VIEW_MISMATCH');
+      state.navigationEvidence={task:identity,zoom,...ready.view,coverage:ready.coverage||null,checkedAt:new Date().toISOString()};
+      if(ready.coverage&&!scan.coverage)scan.coverage=ready.coverage;
+      const scrapeRequest={action:'SCRAPE_PAGE',task:identity,query:qText,
         queryInfo:{index:qIdx,total:queriesToRun.length,cellIndex:cIdx,totalCells:cells.length},maxItems:config.maxPerCell||120,scrollDelay:config.scrollDelay||1100,uiLanguage:config.uiLanguage||'ar',searchLocale:taskLocale,
         cellInfo:{...cell,index:cIdx,total:cells.length,currentQueryIndex:qIdx,totalQueries:queriesToRun.length,queryText:qText,
-          studyArea:state.studyArea,studyAreaBounds:state.studyAreaBounds}});
+          scanIndex,scanTotal:scans.length,completedTasks:state.stats.currentStep,
+          studyArea:state.studyArea,studyAreaBounds:state.studyAreaBounds}};
+      response=await sendTabMessageWithRetry(state.workerTabId,scrapeRequest);
+      // صفحة لم ترسم أي بطاقة إطلاقًا: ليست منطقة خالية، بل صفحة لم تُقرأ.
+      // أشهر سبب أن التبويب في الخلفية فلا يرسم Google قائمته. نعيد تحميل
+      // صفحة الخلية مرة واحدة بدل حفظ «صفر» يوهم بأن الخلية فُحصت.
+      const domSnapshot=response?.evidence?.dom;
+      if(response?.success && response.evidence?.emptyVerified!==true && domSnapshot && domSnapshot.anyCards===0 && attempt<=1){
+        scan.recoveredFromBlankPage=true;
+        await closeWorkerTab();
+        if(!live())return;
+        await ensureWorkerTab(cell.id);
+        if(!live())return;
+        const again=await preparePage(zoom);
+        if(!live())return;
+        if(again?.success && again.view?.queryVerified){
+          scan.coverage=again.coverage||scan.coverage;
+          response=await sendTabMessageWithRetry(state.workerTabId,scrapeRequest);
+        }
+      }
+      scan.domEvidence=response?.evidence?.dom||domSnapshot||null;
+      // قائمة Google قد تكون عن منطقة أوسع: بطاقات كثيرة وكلها خارج الخلية تعني
+      // أن الترتيب لم يُقيَّد بهذا العرض. نقرة «البحث في هذه المنطقة» تجعل المصدر
+      // يعيد الترتيب على نافذة الخلية نفسها، ثم نقرأ مرة أخرى بدل حفظ صفر.
+      if(response?.success && Array.isArray(response.items) && response.items.length && attempt<=1 && !scan.searchedAreaAgain){
+        let inCellObserved=0;
+        for(const raw of response.items){
+          const x=Number(raw?.x),y=Number(raw?.y);
+          if(!Number.isFinite(x)||!Number.isFinite(y))continue;
+          const owner=SpatialUtils.findOwnerCell(x,y,cells);
+          if(owner&&owner.id===cell.id){inCellObserved++;break;}
+        }
+        if(inCellObserved===0){
+          const area=await sendTabMessageWithRetry(state.workerTabId,{action:'SEARCH_THIS_AREA',task:identity,query:qText});
+          if(!live())return;
+          if(area?.clicked){
+            scan.searchedAreaAgain=true;
+            response=await sendTabMessageWithRetry(state.workerTabId,scrapeRequest);
+            scan.domEvidence=response?.evidence?.dom||scan.domEvidence||null;
+          }
+        }
+      }
     }
     if(!live())return;
     if(!response?.success || !Array.isArray(response.items))throw new SourceAdapters.SourceError(response?.errorCode||'INVALID_RESPONSE',response?.error,{blocked:['SOURCE_BLOCKED','RATE_LIMITED'].includes(response?.errorCode),retryAfterMs:60000});
     if(!response.task || Object.keys(identity).some(key=>response.task[key]!==identity[key]))throw new SourceAdapters.SourceError('STALE_TASK_RESPONSE');
-    let newCount=0,dupCount=0,outsideCount=0,unlocatedCount=0,discoveredElsewhere=0;
+    let newCount=0,dupCount=0,outsideCount=0,unlocatedCount=0,discoveredElsewhere=0,inCellCount=0;
     if(!recordIndex)recordIndex=new PlaceRecords.RecordIndex(state.results);
     for(let i=0;i<response.items.length;i++){
       if(!live())return;
@@ -806,6 +1052,7 @@ async function processQueueStep() {
         item.cellId=ownerCell.id;
         item.cellName=ownerCell.name;
         if(ownerCell.id!==cell.id){discoveredElsewhere++;item.qualityFlags.push('discovered_outside_current_cell');}
+        else inCellCount++;
       }else{
         unlocatedCount++;
         item.ownerCellId=null;item.cellId=null;item.cellName=null;
@@ -855,17 +1102,44 @@ async function processQueueStep() {
     if(outcome==='confirmed_empty' && !response.evidence?.emptyVerified)outcome='unknown';
     // Zero retained places after spatial filtering does not establish an empty source response.
     if(!response.items.length && outcome==='complete')outcome=response.evidence?.emptyVerified?'confirmed_empty':'unknown';
-    cell.status=outcome==='complete'?'done':outcome;
-    cell.statusByQuery[queryId]={status:outcome,attempt,identity,finishedAt:Date.now(),newCount,dupCount,
+    // «نهاية القائمة» لا تعني اكتمال الخلية إن كان عرض الخريطة أضيق من الخلية.
+    // كانت هذه الحالة تُوسم مكتملة فتبدو الخلية منجزة وفيها معالم لم تُقرأ.
+    const coverageIncomplete=Boolean(scan.coverage && scan.coverage.covers===false);
+    if(coverageIncomplete && (outcome==='complete'||outcome==='confirmed_empty'))outcome='partial';
+    // بطاقات أُرجعت ولا واحدة منها داخل الخلية: المصدر رتّب قائمة عن منطقة أخرى.
+    // لا يصح وسم الخلية مكتملة، ولا تركها بلا قراءة أعمق.
+    const listNotAboutCell=response.items.length>0 && inCellCount===0;
+    if(listNotAboutCell && outcome==='complete')outcome='partial';
+    Object.assign(scan,{status:outcome,evidence:response.evidence||null,newCount,dupCount,outsideCount,unlocatedCount,discoveredElsewhere,inCellCount,itemCount:response.items.length,coverageIncomplete,dom:scan.domEvidence||null,finishedAt:Date.now()});
+    // سبب مفهوم لصفر سجلات: بلا هذا السطر يرى المستخدم «0» فقط بلا أي تفسير.
+    if(typeof ScanDiagnostics!=='undefined'){
+      scan.diagnosis=ScanDiagnostics.describeScan({items:response.items.length,newCount,dupCount,outsideCount,unlocatedCount,
+        discoveredElsewhere,inCellCount,outcome,coverage:scan.coverage?.covers,dom:scan.domEvidence||null});
+      state.lastScanDiagnosis={...scan.diagnosis,cellId:cell.id,cellName:cell.name||cell.id,queryId,query:qText,at:Date.now()};
+    }
+    const children=provider.id==='google_maps_dom'?refineSearchView(scan,outcome,state.config):[];
+    if(children.length){scan.refined=true;scans.push(...children);}
+    const hasPending=scans.some(view=>view.status==='pending');
+    const aggregate=hasPending?'processing':searchViewOutcome(scans);
+    cell.status=aggregate==='complete'?'done':aggregate;
+    cell.statusByQuery[queryId]={status:hasPending?'running':aggregate,attempt:0,identity,finishedAt:hasPending?null:Date.now(),
+      scans,newCount:scans.reduce((n,s)=>n+(s.newCount||0),0),dupCount:scans.reduce((n,s)=>n+(s.dupCount||0),0),
+      inCellCount:scans.reduce((n,s)=>n+(s.inCellCount||0),0),
       outsideCount,unlocatedCount,discoveredElsewhere,evidence:response.evidence||null};
     state.queryStats=state.queryStats||{};
     const stats=state.queryStats[qText] || {itemsFound:0,completedCells:0,outcomes:{}};
-    stats.itemsFound+=newCount;stats.completedCells=cIdx+1;stats.outcomes[outcome]=(stats.outcomes[outcome]||0)+1;
+    stats.itemsFound+=newCount;
+    if(!hasPending){stats.completedCells=cIdx+1;stats.outcomes[aggregate]=(stats.outcomes[aggregate]||0)+1;}
     state.queryStats[qText]=stats;
+    if(hasPending){
+      state.checkpoint={...identity,queryIndex:qIdx,cellIndex:cIdx,phase:'detail_scan_committed',scanIndex};
+      scheduleAfter=Math.max(provider.minDelayMs||2500,Number(config.delayMs)||1600);
+      await saveState(true);broadcastUpdate();return;
+    }
   }catch(error){
     if(!live())return;
     state.lastError={code:error.code||'SOURCE_ERROR',message:error.message,cellId:cell?.id,queryId,time:Date.now()};
-    if(['NAVIGATION_VIEW_MISMATCH','NAVIGATION_FAILED'].includes(error.code)){
+    if(['NAVIGATION_VIEW_MISMATCH','NAVIGATION_FAILED','CAMERA_NOT_AT_CELL','STALE_DOCUMENT'].includes(error.code)){
       cell.status='error';cell.statusByQuery[queryId]={...cell.statusByQuery[queryId],status:'error',error:state.lastError};
       state.status='paused';state.pauseReason=error.code;cancelActiveWork();await saveState(true);broadcastUpdate();return;
     }
@@ -916,56 +1190,78 @@ async function processQueueStep() {
   }
 }
 
-/** Reuse a worker tab only for a provider that explicitly supports browser collection. */
-async function ensureWorkerTab() {
-  if (scraperState.workerTabId) {
+/**
+ * صفحة بحث مستقلة لكل خلية: يُغلق تبويب الخلية السابقة ويُفتح تبويب جديد،
+ * حتى لا تُقرأ قائمة نتائج قديمة أو كاميرا لم تتحرك. التبويب غير مرئي.
+ */
+async function ensureWorkerTab(cellId) {
+  const wanted = String(cellId || '');
+  if (scraperState.workerTabId && scraperState.workerTabCellId === wanted) {
     try {
       const tab = await chrome.tabs.get(scraperState.workerTabId);
       if (tab) return tab;
     } catch (e) {}
   }
-  const locale=scraperState.config?.searchLocale||'ar';
-  const newTab = await chrome.tabs.create({ url: `https://www.google.com/maps?hl=${encodeURIComponent(locale)}`, active: false });
+  if (scraperState.workerTabId) await closeWorkerTab();
+  const newTab = await chrome.tabs.create({ url: 'about:blank', active: false });
   scraperState.workerTabId = newTab.id;
-  saveState();
+  scraperState.workerTabCellId = wanted;
+  await saveState(true);
   return newTab;
 }
 
 /**
  * توجيه التبويب وانتظار اكتمال التحميل
  */
-function matchesMapsNavigation(actual,target){
+function taskToken(url){
+  try{return new URL(url).searchParams.get('dalil_task')||'';}catch(_){return '';}
+}
+function matchesMapsNavigation(actual,target,toleranceMeters){
   try{
     const a=new URL(actual),b=new URL(target);
     if(a.origin!==b.origin||!a.pathname.startsWith('/maps/'))return false;
     if(a.pathname.startsWith('/maps/place/'))return true; // PREPARE_TASK also verifies the search box query.
-    return DalilSearchNavigation.verify(a.href,b.href).verified;
+    // كانت المقارنة تكتفي بقرب الكاميرا (حتى 50 كم)، فكانت الصفحة السابقة تُعتبر جاهزة
+    // وتُقرأ نتائج الخلية السابقة. الآن نطلب بصمة المهمة نفسها: صفحة هذه الخلية تحديدًا.
+    const token=taskToken(target);
+    if(token && taskToken(actual)===token)return true;
+    // قد يحذف Google معاملاتنا عند توحيد الرابط؛ حينها نثبت الهوية بالكاميرا نفسها.
+    if(taskToken(actual))return false;
+    return DalilSearchNavigation.verify(a.href,b.href,'',Math.max(150,Number(toleranceMeters)||150)).centerVerified;
   }catch(_){return false;}
 }
 
-function navigateTabAndWait(tabId, url, timeoutMs = 26000) {
+function navigateTabAndWait(tabId, url, timeoutMs = 45000, toleranceMeters = 150) {
   const epoch=operationEpoch;
   return new Promise((resolve) => {
     let resolved = false;
+    let pollTimer=null;
 
     function cleanup() {
       if (!resolved) {
         resolved = true;
         clearTimeout(timer);
+        if(pollTimer)clearTimeout(pollTimer);
         chrome.tabs.onUpdated.removeListener(listener);
       }
     }
 
-    const listener = async (updatedTabId, changeInfo) => {
-      if (updatedTabId === tabId && changeInfo.status === "complete") {
-        try {
-          const loaded=await chrome.tabs.get(tabId);
-          if(epoch!==operationEpoch){cleanup();resolve(false);return;}
-          // Never accept a previous cell's completion event. The task nonce must survive navigation.
-          if(!loaded || !matchesMapsNavigation(loaded.url,url))return;
-          cleanup();resolve(true);
-        } catch(_){cleanup();resolve(false);}
-      }
+    const checkLoaded=async()=>{
+      if(resolved)return;
+      try{
+        const loaded=await chrome.tabs.get(tabId);
+        if(resolved)return;
+        if(epoch!==operationEpoch){cleanup();resolve(false);return;}
+        if(loaded?.status==='complete'&&matchesMapsNavigation(loaded.url,url,toleranceMeters)){cleanup();resolve(true);}
+      }catch(_){cleanup();resolve(false);}
+    };
+    const listener = (updatedTabId, changeInfo) => {
+      // Google may canonicalize the camera/query after its document complete event.
+      if(updatedTabId===tabId&&(changeInfo.status==='complete'||changeInfo.url))checkLoaded();
+    };
+    const poll=async()=>{
+      await checkLoaded();
+      if(!resolved)pollTimer=setTimeout(poll,500);
     };
 
     const timer = setTimeout(() => {
@@ -977,12 +1273,14 @@ function navigateTabAndWait(tabId, url, timeoutMs = 26000) {
 
     (async () => { try {
       const tab = await chrome.tabs.get(tabId);
-      if (tab && tab.url === url && tab.status === "complete" && epoch===operationEpoch) {
-        cleanup();
-        resolve(true);
+      if (tab && tab.url === url && epoch===operationEpoch) {
+        if (tab.status === "complete") { cleanup(); resolve(true); return; }
+        // التبويب بالفعل في طريقه إلى هذا الرابط نفسه؛ لا داعي لإعادة توجيهه.
+        poll();
         return;
       }
       await chrome.tabs.update(tabId, { url });
+      if(!resolved)poll();
     } catch (e) {
       cleanup();
       resolve(false);
@@ -1046,6 +1344,7 @@ function broadcastUpdate() {
   };
 
   chrome.runtime.sendMessage(updateMsg).catch(() => {});
+  if(scraperState.workerTabId)chrome.tabs.sendMessage(scraperState.workerTabId,{action:'JOB_STATUS',state:updateMsg.state}).catch(()=>{});
 
   // بث التحديث عبر قنوات الاتصال النشطة (Active Ports)
   for (const port of activePorts) {
@@ -1060,6 +1359,7 @@ function broadcastUpdate() {
 async function resetScraper(preserveWorkspace = true) {
   cancelActiveWork();
   await closeWorkerTab();
+  if (typeof PlaceRecords !== "undefined") recordIndex = new PlaceRecords.RecordIndex([]);
   const cells=preserveWorkspace ? scraperState.cells.map(cell=>({...cell,status:'pending',itemsFound:0,statusByQuery:{}})) : [];
   const area=preserveWorkspace ? scraperState.studyArea : null;
   const resultsRevision=(scraperState.resultsRevision||0)+1;
@@ -1083,8 +1383,10 @@ async function resetScraper(preserveWorkspace = true) {
       startTime: null,
       endTime: null
     },
-    workerTabId: null
+    workerTabId: null,
+    workerTabCellId: null
   };
+  activeTabDocumentId = null;
   recordIndex=new PlaceRecords.RecordIndex(scraperState.results);
   await saveState(true);
   broadcastUpdate();

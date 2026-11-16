@@ -29,5 +29,14 @@ const records = [{ id: 'p1', name: 'مسجد الاختبار 東京', canonical
   context.self.postMessage = message => { rejected = message; };
   await context.self.onmessage({ data: { requestId: 'restricted', format: 'json', records: [{ ...records[0], provider: 'google_maps_dom', exportAllowed: false }], options: { language: 'en' } } });
   assert.equal(rejected.success, false);
+  assert.equal(rejected.errorCode, 'EXPORT_RESTRICTED');
+  assert.equal(rejected.details.restricted, 1);
+  assert.equal(rejected.details.total, 1);
+  assert.equal(rejected.details.exportable, 0);
+  assert.match(rejected.error, /source license does not permit bulk export/);
+  let mixed;
+  context.self.postMessage = message => { mixed = message; };
+  await context.self.onmessage({ data: { requestId: 'mixed', format: 'json', records: [records[0], { ...records[0], id: 'p2', provider: 'google_maps_dom', exportAllowed: false }], options: { language: 'en' } } });
+  assert.equal(mixed.success, true, 'A mixed selection still exports its reusable records');
   console.log('Local export worker: all seven formats and restricted-source rejection passed (isolated worker-like VM).');
 })().catch(error => { console.error(error); process.exitCode = 1; });

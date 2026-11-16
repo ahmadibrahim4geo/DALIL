@@ -1,0 +1,113 @@
+{
+  "schema": "dalil.survey-verification/1",
+  "request_id": "survey-reliability-2026-11-14",
+  "date": "2026-11-14",
+  "base_revision": "ab16fa09585c5812ab1f0979c2f3d9a62896f7fe",
+  "working_tree": "uncommitted local fixes",
+  "overall": "PARTIAL: implementation and bounded behavior verified; exhaustive real-world place coverage has no ground truth",
+  "criteria": [
+    {
+      "id": "progressive_extraction",
+      "status": "VERIFIED",
+      "evidence": "test_survey_regressions: 39 records from three recycled DOM cards; native browser: 33 records"
+    },
+    {
+      "id": "bounded_spatial_refinement",
+      "status": "VERIFIED",
+      "evidence": "worker scenarios: 21-view bound, currentStep unchanged until commit, restart resumes pending children; native: five views and six records with original owner"
+    },
+    {
+      "id": "drawing_and_selection",
+      "status": "VERIFIED",
+      "evidence": "native polygon first vertex, active aria-pressed, stable cyan boundary; workspace native rectangle/edit/cancel/undo journeys"
+    },
+    {
+      "id": "state_colors",
+      "status": "VERIFIED",
+      "evidence": "distinct amber processing and purple dashed partial states; shared legend contract; screenshot inspection"
+    },
+    {
+      "id": "progress_pause_stop_drag",
+      "status": "VERIFIED",
+      "evidence": "native 1/25 denominator, dragged position survives pause, final stop closes source tab; 25 worker integration scenarios"
+    },
+    {
+      "id": "reopen_and_new_search",
+      "status": "VERIFIED",
+      "evidence": "native 33 results remain plotted after retained-record search and dashboard reload; live exact result restored after browser restart"
+    },
+    {
+      "id": "live_fayoum_sample",
+      "status": "VERIFIED",
+      "evidence": "one source-verified point retained within a small owning cell, query/camera verified with zero metre error; partial status preserved"
+    },
+    {
+      "id": "exhaustive_fayoum_and_other_categories",
+      "status": "NOT RUN",
+      "evidence": "No independent ground-truth place inventory. Neither completed tasks nor the live sample establishes exhaustive coverage."
+    }
+  ],
+  "checks": [
+    {
+      "command": "npm.cmd test",
+      "exit_code": 0,
+      "log_sha256": "2d17464bee11f1e2d61a5e300b6b9ee4cb23ce5976bb65a36b0169c88ba8d45b"
+    },
+    {
+      "command": "node test/test_comprehensive_audit.js",
+      "exit_code": 0,
+      "result": "30/30",
+      "log_sha256": "a43b554646fa065d02e4197e9e2083976a1871ca578c3c0b4f04c84c31f6ef8f"
+    },
+    {
+      "command": "node test/test_survey_browser.js",
+      "exit_code": 0,
+      "result": {
+        "status": "passed",
+        "browser": "151.0.7922.34",
+        "virtualizedPlaces": 33,
+        "detailViews": 5,
+        "refinedPlaces": 6,
+        "checks": [
+          "drawing tool selection and first-vertex feedback",
+          "separate fixed study boundary",
+          "25-cell HUD denominator",
+          "drag position survives pause",
+          "pause and final stop",
+          "recycled DOM extraction",
+          "retained results on new job and dashboard reload",
+          "bounded detail scans and original owner cell"
+        ],
+        "limitation": "Controlled source HTML. Completeness of live Fayoum / Google Maps is not verified."
+      }
+    }
+  ],
+  "live_sample": {
+    "status": "completed",
+    "retained_count": 1,
+    "cell_status": "partial",
+    "center_error_metres": 0,
+    "observed_card_count": 120,
+    "exact_point_readback": true,
+    "limitation": "The live collection preceded the final all-candidate end-marker change; the final selector was verified with unit fixtures and native controlled documents. Live browser-restart readback used the final code."
+  },
+  "source_hashes": {
+    "background/background.js": "ba3b543b552039652fcc77c9306bd78b4a715faeceb29aaffabe06019eb231f7",
+    "content/content.js": "367f94255d2504b8ad529322aed7dc13d323ff56c7b703d5ff3f6482d9b6bf8f",
+    "core/grid-presentation.js": "c0f4838ee0345013f5746eed0a06f20128eae1e7e9c53c27f2f857c62fb09820",
+    "core/i18n.js": "acfb47046c703a363cb24b3b53db012a6089528bb978b4fa1430ec81240213f7",
+    "dashboard/dashboard.js": "9b55b9ce74907b705a32bbaa1c26f637a4d75208f19d4d7513ca26a91befd081",
+    "dashboard/dashboard.html": "2794e25583fc50aa14c68ef58102224082ab599fec52d9e5c8c678ae42615587",
+    "package.json": "861aee3f3d6a35c9b314140c7f0afc57ac4a63597db47ceee8568d25b7efa0b2",
+    "test/test_survey_browser.js": "9617bf564f64f2c25d7919f7d28aa5240d8a9f2259e231f745d18995f4cb401d",
+    "test/test_survey_regressions.js": "840e12f5476bddba3740452134487626a0f89ba8c7cc600743041aadaadc428e",
+    "test/test_job_engine.js": "454201ecdf3f73df066071a8a816240011854bb8849762c7dfe1966bb8610088",
+    "test/test_content_multilingual.js": "c388adafc780ea56ffb3c9f22ee0f23e645338b69163b9c6b3712f1c5d43dc12",
+    "test/test_workspace_r2_browser.js": "f615ea7dd1896254babebd835dc4d3151ab5cae159a2bbcd294bd4fce4448489"
+  },
+  "limitations": [
+    "Live observations are one small anonymous sample, not a census.",
+    "Bounded detail scans increase requests and duration; partial/capped views may remain.",
+    "Source tree changes have not been reloaded into the user Chrome profile."
+  ]
+}
