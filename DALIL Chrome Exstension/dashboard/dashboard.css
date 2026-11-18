@@ -4078,6 +4078,32 @@ input[type="checkbox"]:focus-visible {
   transition: width 0.4s var(--ease);
 }
 
+/* Export progress: shown for worker-backed archive generation */
+.export-progress {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r);
+  background: linear-gradient(135deg, var(--paper), var(--paper-2));
+}
+
+.export-progress.hidden {
+  display: none;
+}
+
+.export-progress .live-progress-info {
+  margin-bottom: 7px;
+  font-size: 12.5px;
+}
+
+.export-progress #exportProgressText {
+  display: inline-block;
+  max-width: 85%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Enhanced Table Readability & Zebra Striping */
 .colldata-table tbody tr:nth-child(even) {
   background: var(--paper-2);

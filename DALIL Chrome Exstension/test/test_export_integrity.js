@@ -35,8 +35,8 @@ function unzipStored(bytes) {
     { ...base, id: 'unverified', name: 'Pending', hasExactCoords: false, x: 30, y: 30 },
     { ...base, id: 'missing', name: 'No coordinates', x: null, y: null },
     { ...base, id: 'invalid', name: 'Invalid bounds', x: 181, y: 0 },
-    { id: 'restricted', provider: 'google_maps_dom', source: 'Google Maps', name: 'Restricted content', x: 31, y: 30, hasExactCoords: true },
-    { id: 'restricted2', provenance: [{ provider: 'google_maps_dom' }], name: 'Restricted provenance', x: 31, y: 30, hasExactCoords: true }
+    { id: 'restricted', provider: 'restricted_source', exportAllowed: false, name: 'Restricted content', x: 31, y: 30, hasExactCoords: true },
+    { id: 'restricted2', provenance: [{ provider: 'restricted_source' }], exportAllowed: false, name: 'Restricted provenance', x: 31, y: 30, hasExactCoords: true }
   ];
   ExportUtils.setLanguage('ar');
   const selection = ExportUtils.selectExportRecords(records);
@@ -102,7 +102,9 @@ function unzipStored(bytes) {
   }
   assert.notEqual(symbols.resolve({ canonicalId: 'google_places:mosque' }).glyph, symbols.resolve({ canonicalId: 'google_places:pharmacy' }).glyph);
   assert.notEqual(symbols.resolve({ canonicalId: 'google_places:pharmacy' }).glyph, symbols.resolve({ canonicalId: 'google_places:hospital' }).glyph);
-  assert.equal(ExportUtils.exportRestriction({ ...base, provider: 'osm_overpass', fieldProvenance: { phone: { provider: 'google_maps_dom' } } }), 'google_content_export_restricted');
+  assert.equal(ExportUtils.exportRestriction({ ...base, provider: 'restricted_source', exportAllowed: false }), 'source_export_restricted');
+  assert.equal(ExportUtils.exportRestriction({ ...base, provider: 'google_maps_dom', source: 'Google Maps' }), null);
+  assert.equal(ExportUtils.exportRestriction({ ...base, provider: 'osm_overpass', fieldProvenance: { phone: { provider: 'google_maps_dom' } } }), null);
   const guardedDedup = ExportUtils.smartDeduplicateByCoords([
     { ...base, id: 'same', place_id: 'first', name: 'Same building', x: 31, y: 30 },
     { ...base, id: 'same', place_id: 'second', name: 'Same building', x: 31, y: 30 },

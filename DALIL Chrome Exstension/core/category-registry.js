@@ -2270,12 +2270,18 @@
     school: { ar: ['مدرسة', 'مدارس', 'الفصل الواحد', 'مدارس الفصل الواحد', 'مدرسة الفصل الواحد', 'مدارس مجتمعية'], en: ['schools', 'one-classroom schools', 'community schools'], fr: ['école', 'écoles'], es: ['escuela'], pt: ['escola'], hi: ['विद्यालय', 'स्कूल'], zh: ['学校'], ja: ['学校'] },
     hospital: { ar: ['مستشفى', 'مستشفيات'], en: ['hospitals'], fr: ['hôpital'], es: ['hospitales'], pt: ['hospitais'], hi: ['अस्पताल'], zh: ['医院'], ja: ['病院'] },
     medical_clinic: { ar: ['عيادة', 'عيادات'], en: ['clinic', 'clinics'], fr: ['clinique'], es: ['clínica'], pt: ['clínica'] },
-    pharmacy: { ar: ['صيدلية', 'صيدليات'], en: ['pharmacies'], fr: ['pharmacie'], es: ['farmacia'], pt: ['farmácia'], hi: ['दवा की दुकान'], zh: ['药店'], ja: ['薬局'] },
+    pharmacy: { ar: ['صيدلية', 'صيدليات', 'اجزاخانة', 'اجزاخانه', 'اجزخانة', 'اجزخانه'], en: ['pharmacies'], fr: ['pharmacie'], es: ['farmacia'], pt: ['farmácia'], hi: ['दवा की दुकान'], zh: ['药店'], ja: ['薬局'] },
     restaurant: { ar: ['مطاعم'], en: ['restaurants'], fr: ['restaurant'], es: ['restaurante'], pt: ['restaurante'], hi: ['रेस्तरां'], zh: ['餐厅'], ja: ['レストラン'] },
-    cafe: { ar: ['مقهى', 'مقاهي', 'كافيه'], en: ['cafes', 'café'], fr: ['café'], es: ['cafetería'], pt: ['café'], hi: ['कैफ़े'], zh: ['咖啡馆'], ja: ['カフェ'] },
+    cafe: { ar: ['مقهى', 'مقاهي', 'كافيه', 'كافيهات', 'قهوة', 'قهوه', 'شيشة'], en: ['cafes', 'café'], fr: ['café'], es: ['cafetería'], pt: ['café'], hi: ['कैफ़े'], zh: ['咖啡馆'], ja: ['カフェ'] },
     bank: { ar: ['بنك', 'بنوك', 'مصرف', 'مصارف'], en: ['banks'], fr: ['banque'], es: ['banco'], pt: ['banco'], hi: ['बैंक'], zh: ['银行'], ja: ['銀行'] },
     atm: { ar: ['صراف آلي', 'ماكينة صراف آلي'], en: ['cash machine', 'automated teller machine'], fr: ['distributeur automatique'], es: ['cajero automático'] },
-    gas_station: { ar: ['محطة بنزين', 'محطة وقود', 'بنزينة', 'محطات وقود'], en: ['petrol station', 'fuel station'], fr: ['station-service'], es: ['gasolinera'], pt: ['posto de combustível'] }
+    gas_station: { ar: ['محطة بنزين', 'محطة وقود', 'بنزينة', 'محطات وقود'], en: ['petrol station', 'fuel station'], fr: ['station-service'], es: ['gasolinera'], pt: ['posto de combustível'] },
+    hotel: { ar: ['فندق', 'فنادق', 'لوكانده', 'لوكاندا', 'نزل'], en: ['hotels'] },
+    bakery: { ar: ['مخبز', 'مخابز', 'فرن', 'افران', 'مخبوزات'], en: ['bakeries'] },
+    car_repair: { ar: ['ورشة', 'ورشه', 'ميكانيكي', 'تصليح سيارات', 'صيانة سيارات', 'بنشري', 'عفشجي'], en: ['car repair', 'mechanic'] },
+    barber_shop: { ar: ['حلاق', 'صالون حلاقة', 'صالون حلاقه', 'كوافير رجالي'], en: ['barber'] },
+    grocery_store: { ar: ['بقالة', 'بقاله', 'دكان', 'دكانه'], en: ['grocery'] },
+    supermarket: { ar: ['سوبر ماركت', 'ميني ماركت'], en: ['supermarkets'] }
   };
 
   // Extracted schema-only subset from iD (ISC), blob revisions pinned per preset.
@@ -2553,9 +2559,17 @@
     gas_station: [{ key: 'amenity', value: 'fuel' }]
   };
 
+  // The shared module is loaded first in the service worker, the export worker
+  // and the dashboard. The inline fallback keeps this UMD usable on its own
+  // (for example in an isolated VM test) with exactly the same letter rules.
+  const ArabicFold = (typeof DalilArabic !== 'undefined' && DalilArabic?.normalize) ? DalilArabic
+    : (typeof require === 'function' ? (() => { try { return require('./arabic-normalize.js'); } catch (_) { return null; } })() : null);
   function normalize(value) {
+    if (ArabicFold?.normalize) return ArabicFold.normalize(value);
     return String(value == null ? '' : value).normalize('NFKC').toLowerCase()
-      .replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي')
+      .replace(/[\u061C\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '')
+      .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, '')
+      .replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC').trim().replace(/\s+/g, ' ');
   }
 
@@ -2711,8 +2725,22 @@
       }
       if (categories.has(value)) return categories.get(value);
       const leaf = leafById.get(value); if (leaf) return categories.get(leaf.canonicalId);
-      const candidates = rankCandidates(value, { ...options, fuzzy: false });
-      return candidates.length === 1 && !candidates[0].requiresReview ? candidates[0].category : null;
+      const pick = list => (list.length === 1 && !list[0].requiresReview ? list[0].category : null);
+      const direct = pick(rankCandidates(value, { ...options, fuzzy: false }));
+      if (direct) return direct;
+      // "إلمدرسة" folds to "المدرسه" while the index stores "مدرسه": a leading
+      // definite article (or its hamza-misplaced spelling) is a variant of the
+      // same place type, not a different one. Only used when the direct exact
+      // lookup could not decide, so no existing confident match changes.
+      if (typeof value === 'string') {
+        const folded = normalize(value);
+        const bare = folded.replace(/^ال/, '').replace(/^al[\s-]?/, '').trim();
+        if (bare && bare !== folded) {
+          const retried = pick(rankCandidates(bare, { ...options, fuzzy: false }));
+          if (retried) return retried;
+        }
+      }
+      return null;
     }
     function audit() {
       const untranslated = [...leafById.values()].filter(l => !l.name_ar || !l.name_en || /[\u0600-\u06ff]/.test(l.name_en));

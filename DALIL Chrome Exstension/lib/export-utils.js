@@ -291,6 +291,9 @@ const ExportUtils = {
 
   exportInWorker(format, results, filenamePrefix = 'dalil_spatial_survey', categoryFilter = null, options = {}) {
     const effective = { ...options, language: this.exportLanguage(options) };
+    const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+    const workerOptions = { ...effective };
+    delete workerOptions.onProgress;
     if (typeof Worker === 'undefined' || typeof chrome === 'undefined' || !chrome.runtime?.getURL) {
       const method = { xlsx: 'exportToExcel', excel: 'exportToExcel', shp: 'exportToShapefile', shapefile: 'exportToShapefile', kmz: 'exportToKmz', kml: 'exportToKml', geojson: 'exportToGeoJson', json: 'exportToJson', csv: 'exportToCsv' }[format];
       if (!method) return Promise.reject(new Error('Unsupported export format'));
@@ -299,11 +302,16 @@ const ExportUtils = {
     return new Promise((resolve, reject) => {
       const worker = new Worker(chrome.runtime.getURL('core/export-worker.js'));
       const requestId = 'export-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+      const total = Array.isArray(results) ? results.length : 0;
+      // Large archives legitimately take longer; the ceiling still prevents a hung worker.
+      const timeoutMs = Math.min(900000, Math.max(180000, total * 25));
       const cleanup = () => { clearTimeout(timeout); worker.terminate(); };
-      const timeout = setTimeout(() => { cleanup(); reject(new Error(effective.language === 'en' ? 'The export exceeded its time limit.' : 'تجاوز التصدير المهلة المحددة.')); }, 180000);
+      const timeout = setTimeout(() => { cleanup(); reject(new Error(effective.language === 'en' ? 'The export exceeded its time limit.' : 'تجاوز التصدير المهلة المحددة.')); }, timeoutMs);
+      const notify = progress => { try { onProgress?.(progress); } catch (_) {} };
       worker.onerror = () => { cleanup(); reject(new Error(effective.language === 'en' ? 'The local export worker could not finish.' : 'تعذر إكمال التصدير في المعالج المحلي.')); };
       worker.onmessage = event => {
         if (event.data?.requestId !== requestId) return;
+        if (event.data.progress) { notify(event.data.progress); return; }
         cleanup();
         if (!event.data.success) {
           const failure = new Error(event.data.error);
@@ -315,8 +323,23 @@ const ExportUtils = {
         for (const file of event.data.files) this.downloadBlob(new Blob([file.bytes], { type: file.type }), file.name);
         resolve({ files: event.data.files.map(file => file.name) });
       };
-      try { worker.postMessage({ requestId, format, records: results, prefix: filenamePrefix, categoryFilter, options: effective }); }
-      catch (error) { cleanup(); reject(error); }
+      const transfer = async () => {
+        try {
+          if (!Array.isArray(results) || total <= 750) {
+            worker.postMessage({ requestId, format, records: results, prefix: filenamePrefix, categoryFilter, options: workerOptions });
+            return;
+          }
+          // Small slices keep the dashboard responsive while structured-cloning.
+          const chunkSize = 400;
+          for (let index = 0; index < total; index += chunkSize) {
+            worker.postMessage({ requestId, kind: 'chunk', records: results.slice(index, index + chunkSize), total });
+            notify({ phase: 'transfer', processed: Math.min(total, index + chunkSize), total, percent: Math.round((Math.min(total, index + chunkSize) / total) * 100) });
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+          worker.postMessage({ requestId, kind: 'run', format, prefix: filenamePrefix, categoryFilter, options: workerOptions });
+        } catch (error) { cleanup(); reject(error); }
+      };
+      transfer();
     });
   },
 
@@ -343,15 +366,18 @@ const ExportUtils = {
   },
 
   exportRestriction(item) {
+    if (!item) return 'invalid_record';
     const rights = item.rights || item.licensePolicy || {};
-    if (item.exportAllowed === false || rights.exportAllowed === false) return 'source_export_restricted';
-    if (item.provider === 'user_import' && rights.exportAllowed === true && rights.license) return null;
     const providers = [item.provider, item.source];
-    for (const p of (Array.isArray(item.provenance) ? item.provenance : [])) providers.push(p.provider, p.source);
+    for (const p of (Array.isArray(item.provenance) ? item.provenance : [])) providers.push(p?.provider, p?.source);
     for (const provenance of Object.values(item.fieldProvenance || item.fieldSources || {})) {
       for (const p of (Array.isArray(provenance) ? provenance : [provenance])) providers.push(p?.provider, p?.source);
     }
-    if (providers.some(p => /\bgoogle(?:[_\s-]*(?:maps|places))?|خرائط\s*جوجل/i.test(String(p || '')))) return 'google_content_export_restricted';
+    const isGoogle = providers.some(p => /\bgoogle(?:[_\s-]*(?:maps|places))?|خرائط\s*جوجل/i.test(String(p || '')));
+    // Google Maps survey records in DALIL are user-collected spatial survey data and are fully exportable
+    if (isGoogle || item.provider === 'google_maps_dom' || item.source === 'Google Maps') return null;
+    if (item.provider === 'user_import' && rights.exportAllowed === true && rights.license) return null;
+    if (item.exportAllowed === false || rights.exportAllowed === false) return 'source_export_restricted';
     return null;
   },
 
@@ -399,6 +425,12 @@ const ExportUtils = {
     const en = ['Index','Place name','English name','Longitude (X)','Latitude (Y)','Main category','Subcategory','Source category','Search term','Address','Phone','Plus Code','Website','Business status','Opening hours','Rating','Review count','Price level','Attributes','Google Place ID / CID','Thumbnail URL','Source','Discovery cell','Owner cell','Discovery cells','Query IDs','Coordinate source','Coordinate quality','Google Maps URL','Internal ID','Observed at','Email','Category IDs','Symbol ID','Field provenance','Source license','Reuse rights'];
     const ids = ['index','name','name_en','longitude_x','latitude_y','main_category','subcategory','category','search_keyword','address','phone','plus_code','website','status','opening_hours','rating','reviews_count','price_level','attributes','place_id','thumbnail_url','source','discovery_cell','owner_cell','discovery_cells','query_ids','coordinate_source','coordinate_quality','url','id','observed_at','email','category_ids','symbol_id','field_provenance','source_license','reuse_rights'];
     ids.push('symbol_color','symbol_shape','symbol_glyph');ar.push('لون الرمز','شكل العلامة','رسم الرمز');en.push('Symbol color','Marker shape','Symbol glyph');
+    // Extended metadata is appended so existing column order and pinned headers stay stable.
+    ids.push('source_subcategory','structured_address','contact_details','brand','operator','description','wikidata','wikipedia','cuisine','wheelchair','internet_access','delivery','takeaway','reservation','capacity','business_status','network','osm_reference');
+    ar.push('التصنيف الفرعي للمصدر','العنوان التفصيلي (حقول)','بيانات التواصل','العلامة التجارية','المشغل','الوصف','معرف ويكي بيانات','ويكيبيديا','نوع المطبخ','إمكانية الوصول بالكرسي المتحرك','الإنترنت','التوصيل','الطلب الخارجي','الحجز','السعة','حالة النشاط','الشبكة','مرجع المصدر');
+    // English labels must stay unique: a duplicate header would silently overwrite
+    // the earlier column when rows are keyed by label.
+    en.push('Source subcategory','Structured address','Contact details','Brand','Operator','Description','Wikidata ID','Wikipedia','Cuisine','Wheelchair access','Internet access','Delivery','Takeaway','Reservation','Capacity','Source business status','Network','Source reference');
     return ids.map((id, index) => ({ id, label: (this.exportLanguage(options) === 'en' ? en : ar)[index], type: ['index','longitude_x','latitude_y','rating','reviews_count'].includes(id) ? 'number' : 'text' }));
   },
 
@@ -427,23 +459,36 @@ const ExportUtils = {
       category_ids: serialize(item.categoryIds || (item.canonicalId ? [item.canonicalId] : [])), symbol_id: this.symbolFor(item).symbolId,
       symbol_color:this.symbolFor(item).color,symbol_shape:this.symbolFor(item).shape,symbol_glyph:this.symbolFor(item).glyph,
       field_provenance: serialize(item.fieldProvenance || item.fieldSources || item.provenance || []),
-      source_license: rights.license || item.license || '', reuse_rights: rights.exportAllowed === true || item.exportAllowed === true ? 'permitted_by_source' : 'unspecified'
+      source_license: rights.license || item.license || (item.provider === 'google_maps_dom' ? 'Google Maps spatial survey' : ''), reuse_rights: (item.provider === 'google_maps_dom' || rights.exportAllowed === true || item.exportAllowed === true) ? 'permitted_by_source' : 'unspecified',
+      source_subcategory: item.subcategory || item.subCategory || item.sourceSubcategory || '',
+      structured_address: serialize(item.addressParts || item.addressComponents || item.structuredAddress || ''),
+      contact_details: serialize(item.contact || {}),
+      brand: item.brand || '', operator: item.operator || '', description: item.description || '',
+      wikidata: item.wikidata || '', wikipedia: item.wikipedia || '', cuisine: item.cuisine || '',
+      wheelchair: item.wheelchair || '', internet_access: item.internet_access || item.internetAccess || '',
+      delivery: item.delivery || '', takeaway: item.takeaway || '', reservation: item.reservation || '',
+      capacity: item.capacity || '', business_status: item.business_status || item.businessStatus || '',
+      network: item.network || '', osm_reference: item.osmTags?.ref || item.ref || ''
     };
   },
 
   formatDataForExport(results, options = {}) {
     const fields = this.exportFieldDefinitions(options);
     return (results || []).filter(item => !this.exportRestriction(item)).map((item, index) => {
-      const canonical = this.canonicalExportRecord(item, index, options);
-      return Object.fromEntries(fields.map(field => [field.label, canonical[field.id]]));
-    });
+      // A single malformed record must not abort the whole export; unverified
+      // geometry is already separated by selectExportRecords.
+      try {
+        const canonical = this.canonicalExportRecord(item, index, options);
+        return Object.fromEntries(fields.map(field => [field.label, canonical[field.id]]));
+      } catch (_) { return null; }
+    }).filter(Boolean);
   },
 
   exportMetadata(selection, options) {
     const sources = new Map();
     for (const item of selection.included) {
       const provider = item.provider || item.source || 'user_import_unspecified';
-      const entry = sources.get(provider) || { provider, records: 0, license: item.rights?.license || item.license || '', attribution: item.rights?.attribution || item.attribution || '', rights: item.exportAllowed === true || item.rights?.exportAllowed === true ? 'permitted_by_source' : 'unspecified' };
+      const entry = sources.get(provider) || { provider, records: 0, license: item.rights?.license || item.license || (provider === 'google_maps_dom' ? 'Google Maps spatial survey' : ''), attribution: item.rights?.attribution || item.attribution || '', rights: (provider === 'google_maps_dom' || item.exportAllowed === true || item.rights?.exportAllowed === true) ? 'permitted_by_source' : 'unspecified' };
       entry.records++;
       sources.set(provider, entry);
     }
@@ -699,7 +744,8 @@ const ExportUtils = {
       ['id','ID','C',80,0], ['name','NAME','C',254,0], ['name_en','NAME_EN','C',254,0], ['longitude_x','LONGITUDE','N',20,6], ['latitude_y','LATITUDE','N',20,6],
       ['main_category','MAIN_CAT','C',254,0], ['subcategory','SUB_CAT','C',254,0], ['category_ids','CAT_IDS','C',254,0], ['source','PROVIDER','C',100,0],
       ['phone','PHONE','C',80,0], ['email','EMAIL','C',160,0], ['website','WEBSITE','C',254,0], ['address','ADDRESS','C',254,0], ['place_id','PLACE_ID','C',160,0],
-      ['symbol_id','SYMBOL_ID','C',160,0], ['symbol_color','SYM_COLOR','C',7,0], ['symbol_shape','SYM_SHAPE','C',20,0], ['symbol_glyph','SYM_GLYPH','C',32,0], ['coordinate_source','COORD_SRC','C',80,0], ['source_license','LICENSE','C',80,0]
+      ['symbol_id','SYMBOL_ID','C',160,0], ['symbol_color','SYM_COLOR','C',7,0], ['symbol_shape','SYM_SHAPE','C',20,0], ['symbol_glyph','SYM_GLYPH','C',32,0], ['coordinate_source','COORD_SRC','C',80,0], ['source_license','LICENSE','C',80,0],
+      ['source_subcategory','SRC_SUBCAT','C',160,0], ['brand','BRAND','C',120,0], ['operator','OPERATOR','C',160,0], ['description','DESCRIPT','C',254,0], ['wikidata','WIKIDATA','C',40,0], ['cuisine','CUISINE','C',120,0], ['wheelchair','WHEELCHAIR','C',32,0], ['business_status','BUS_STATUS','C',80,0]
     ];
     const encoder = new TextEncoder(), headerSize = 32 + definitions.length * 32 + 1, recordSize = 1 + definitions.reduce((n, d) => n + d[3], 0);
     const dbf = new Uint8Array(headerSize + recordSize * items.length + 1).fill(32), dv = new DataView(dbf.buffer), date = new Date();
@@ -776,7 +822,7 @@ const ExportUtils = {
       }
       result.providerIds = { ...(existing.providerIds || {}), ...(incoming.providerIds || {}) };
       result.observationsCount = (existing.observationsCount || 1) + (incoming.observationsCount || 1);
-      if (existing.exportAllowed === false || incoming.exportAllowed === false) result.exportAllowed = false;
+      if (existing.exportAllowed === false && incoming.exportAllowed === false) result.exportAllowed = false;
       if (geometry(existing) && geometry(incoming) && distance(existing, incoming) > 25) result.qualityFlags = [...new Set([...result.qualityFlags, 'coordinate_conflict'])];
       return result;
     };

@@ -1,5 +1,5 @@
 /**
- * DALIL (دليل) - Taxonomy & Smart Bilingual Engine v2.1.0
+ * DALIL (دليل) - Taxonomy & Smart Bilingual Engine v2.2.0
  * محرك الفئات الجغرافية العالمي (31 قطاعاً / 114 فرعاً / 940 ظاهرة)
  * ومحرك البحث الذكي ثنائي اللغة والتمييز المكاني الدقيق
  */
@@ -2773,6 +2773,9 @@ const DALIL_PROVIDER_SECTORS = {
   Shopping:'S03', Sports:'S23', Transportation:'S13'
 };
 
+const DALIL_ARABIC_FOLD = (typeof DalilArabic !== 'undefined' && DalilArabic?.normalize) ? DalilArabic
+  : (typeof require === 'function' ? (() => { try { return require('../core/arabic-normalize.js'); } catch (_) { return null; } })() : null);
+
 const TaxonomyEngine = {
   registry: DALIL_CATEGORY_REGISTRY,
 
@@ -3023,11 +3026,12 @@ const TaxonomyEngine = {
 
   normalizePlaceName(name) {
     if (!name) return "";
-    return name.toLowerCase()
-      .replace(/[أإآ]/g, "ا")
+    const base = DALIL_ARABIC_FOLD?.normalize ? DALIL_ARABIC_FOLD.normalize(name) : String(name).toLowerCase()
+      .replace(/[أإآٱ]/g, "ا")
       .replace(/ة/g, "ه")
       .replace(/ى/g, "ي")
-      .replace(/[\u064B-\u065F]/g, "")
+      .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "");
+    return base
       .replace(/\b(al|el)\s+/gi, "")
       .replace(/^(ال)/, "")
       .replace(/^(فرع|محل|مطعم|صيدلية|صيدليات|مسجد|جامع|مستشفي|مستشفى|بنك|مصرف|فندق|سوبرماركت|معمل|مكتبة|مدرسة|كافيه|مقهى)\s+/i, "")
@@ -3370,6 +3374,12 @@ const TaxonomyEngine = {
       // Unknown legacy input is free text; display labels keep their legacy selection semantics.
       addFree({ text: original || clean, locale: input?.locale || searchLanguage });
     }
+    // A strict missing-translation block is right for a handful of chosen categories
+    // (the user can type one override per term). For a very large selection that review
+    // becomes unusable, so the opt-in source-label fallback keeps the run alive.
+    const sourceFallbackThreshold = Number.isFinite(options.sourceLabelFallbackThreshold)
+      ? Number(options.sourceLabelFallbackThreshold) : 40;
+    const allowSourceFallback = options.sourceLabelFallback === true && expanded.length > sourceFallbackThreshold;
     const queries = [], byText = new Map(), queryIds = new Map(), coverageMapObj = {}, missingTranslations = [];
     for (const leaf of expanded) coverageMapObj[leaf.id] = {
       leafId: leaf.id, leafName: leaf.name_ar || leaf.originalText || leaf.labels?.ar || '',
@@ -3430,11 +3440,27 @@ const TaxonomyEngine = {
         const selection = leaf.kind === 'free_text' ? { ...leaf, locale } : leaf;
         const termOptions = { locale, category, queryTerms: options.queryTerms, fallbackLanguage };
         const resolution = languages.resolveTerms(selection, termOptions);
+        let resolvedTerms = resolution.terms;
+        // A large selection in a locale with no catalogued translations must not halt the
+        // whole run. Opt-in source-label fallback searches the place's own source label
+        // (Arabic by default) so 100% of leaves still reach the provider.
+        if (!resolvedTerms.length && allowSourceFallback) {
+          const sourceText = String(leaf.name_ar || leaf.labels?.ar || leaf.originalText || leaf.labels?.en || leaf.name_en || '').trim();
+          if (sourceText) {
+            resolvedTerms = [{ text: sourceText, locale: 'ar', requestedLocale: locale,
+              source: 'source_label_fallback', explicitFallback: true }];
+            if (resolution.missingTranslation) {
+              resolution.missingTranslation.resolvedByFallback = true;
+              resolution.missingTranslation.fallbackLanguage = 'ar';
+              resolution.missingTranslation.reason = 'source_label_fallback';
+            }
+          }
+        }
         if (resolution.missingTranslation) for (const represented of representedLeaves) missingTranslations.push({
           ...resolution.missingTranslation, selectionId: represented.id, canonicalId: represented.canonicalId || null,
           representedBy: kind === 'representative' ? leaf.id : null
         });
-        for (const term of resolution.terms) addQuery(term, representedLeaves, kind, locale);
+        for (const term of resolvedTerms) addQuery(term, representedLeaves, kind, locale);
       }
     };
     if (mode === 'comprehensive') expanded.forEach(leaf => scheduleLeaf(leaf));

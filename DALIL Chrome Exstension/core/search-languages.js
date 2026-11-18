@@ -660,7 +660,10 @@
     }
     return { terms: [], missingTranslation, fallbackUsed: false };
   }
-  const fold = value => String(value || '').normalize('NFKC').toLowerCase().trim();
+  const ArabicFold = (typeof DalilArabic !== 'undefined' && DalilArabic?.fold) ? DalilArabic
+    : (typeof require === 'function' ? (() => { try { return require('./arabic-normalize.js'); } catch (_) { return null; } })() : null);
+  const fold = value => ArabicFold?.fold ? ArabicFold.fold(value) : String(value || '').normalize('NFKC').toLowerCase()
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim();
   function findConceptIds(text, locale = null) {
     const match = fold(text), allowed = locale ? new Set(lookupChain(locale)) : null, ids = new Set();
     if (!match) return [];

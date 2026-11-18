@@ -1,4 +1,4 @@
-# دَلِيل 2.1.0 — دليل الاستخدام والتطوير
+# دَلِيل 2.2.0 — دليل الاستخدام والتطوير
 
 **Discovery and Acquisition of Location Information & Listings**
 

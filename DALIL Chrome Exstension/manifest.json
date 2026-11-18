@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "دليل (DALIL) | مستخرج البيانات المكانية لخرائط جوجل",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "منصة دليل (DALIL) - اكتشاف وجمع معلومات المواقع وسجلات الأماكن (Discovery and Acquisition of Location Information & Listings) للمسح الجغرافي واستخراج إحداثيات X و Y إلى إكسيل و GIS.",
   "permissions": [
     "storage",
@@ -36,7 +36,7 @@
         "https://maps.google.com/*",
         "https://*.google.com/search*"
       ],
-      "js": ["lib/spatial-utils.js", "core/search-navigation.js", "content/content.js"],
+      "js": ["core/arabic-normalize.js", "lib/spatial-utils.js", "core/search-navigation.js", "content/content.js"],
       "run_at": "document_idle"
     }
   ],

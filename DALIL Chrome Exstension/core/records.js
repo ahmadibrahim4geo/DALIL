@@ -5,8 +5,12 @@
   root.PlaceRecords = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const normalizeName = value => String(value || '').normalize('NFKC').toLocaleLowerCase('und')
-    .replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/\s+/g, ' ').trim();
+  const ArabicFold = (typeof DalilArabic !== 'undefined' && DalilArabic?.normalize) ? DalilArabic
+    : (typeof require === 'function' ? (() => { try { return require('./arabic-normalize.js'); } catch (_) { return null; } })() : null);
+  const normalizeName = value => ArabicFold?.normalize ? ArabicFold.normalize(value)
+    : String(value || '').normalize('NFKC').toLocaleLowerCase('und')
+      .replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
+      .replace(/\s+/g, ' ').trim();
   function hasGeometry(item) {
     return !!item && item.hasExactCoords === true && typeof item.x === 'number' && typeof item.y === 'number' &&
       Number.isFinite(item.x) && Number.isFinite(item.y) && Math.abs(item.x) <= 180 && Math.abs(item.y) <= 90;
@@ -30,13 +34,15 @@
       fieldProvenance: { ...(item.fieldProvenance || {}) },
       qualityFlags: [...new Set([...(item.qualityFlags || []), ...(!exact ? ['unlocated'] : [])])]
     };
+    const exportPermitted = context.exportAllowed !== undefined ? context.exportAllowed === true : (item.exportAllowed !== false || provider === 'google_maps_dom');
     const receipt = { provider, sourceUrl: item.sourceUrl || item.url || context.sourceUrl || '', observedAt: now,
-      license: item.license || context.license || 'unspecified', exportAllowed: context.exportAllowed === true,
+      license: item.license || context.license || (provider === 'google_maps_dom' ? 'Google Maps spatial survey' : 'unspecified'), exportAllowed: exportPermitted,
       jobId: context.jobId || null, cellId: context.cellId || null, queryId: context.queryId || null };
     if (!record.provenance.some(p => p.jobId === receipt.jobId && p.cellId === receipt.cellId && p.queryId === receipt.queryId && p.provider === provider)) record.provenance.push(receipt);
-    record.exportAllowed = context.exportAllowed === true;
+    record.exportAllowed = exportPermitted;
     // Only fields actually observed receive an observed provenance claim. Missing is explicit.
-    const fields = ['name', 'name_en', 'category', 'address', 'phone', 'website', 'email', 'rating', 'reviewsCount', 'opening_hours', 'status', 'plus_code', 'price_level'];
+    const fields = ['name', 'name_en', 'category', 'subcategory', 'address', 'phone', 'website', 'email', 'rating', 'reviewsCount', 'opening_hours', 'status', 'plus_code', 'price_level',
+      'description', 'brand', 'operator', 'wikidata', 'wikipedia', 'cuisine', 'wheelchair', 'internet_access', 'delivery', 'takeaway', 'reservation', 'capacity', 'business_status', 'network'];
     for (const field of fields) {
       if (!record.fieldProvenance[field]) record.fieldProvenance[field] = {
         provider, sourceUrl: receipt.sourceUrl, observedAt: now,

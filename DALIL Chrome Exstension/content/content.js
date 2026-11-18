@@ -838,6 +838,18 @@
       .slice(0, 4)
       .join(" · ");
 
+    // وسائل تواصل إضافية: بريد إلكتروني صريح من الصفحة، ووصف من بيانات الصفحة الوصفية
+    // للمكان (لا من وصف خرائط جوجل العام).
+    let email = "";
+    const mailEl = document.querySelector('a[href^="mailto:"]');
+    if (mailEl) email = decodeURIComponent(String(mailEl.getAttribute("href") || "").replace(/^mailto:/i, "").split("?")[0]).trim();
+    let description = "";
+    const metaDescription = document.querySelector('meta[name="description"], meta[property="og:description"]');
+    if (metaDescription) {
+      const metaText = String(metaDescription.getAttribute("content") || "").trim();
+      if (metaText && !/^(Find local businesses|Explore the world|اكتشف العالم|ابحث عن الأنشطة التجارية)/i.test(metaText)) description = metaText.slice(0, 500);
+    }
+
     return {
       id: generatePlaceId(name, coords.x, coords.y, cid, placeId),
       name,
@@ -865,6 +877,13 @@
       cid,
       thumbnail_url: thumbnailUrl,
       attributes,
+      email,
+      description,
+      subcategory: category,
+      subCategory: category,
+      sourceCategory: category,
+      business_status: status,
+      contact: { ...(phone ? { phone } : {}), ...(website ? { website } : {}), ...(email ? { email } : {}), ...(phoneRaw ? { phoneRaw } : {}) },
       url: currentUrl,
       source: "Google Maps",
       searchKeyword: cellInfo ? (cellInfo.query || cellInfo.searchKeyword || "") : "",
@@ -1101,6 +1120,8 @@
         let priceLevel = "";
         let attributes = "";
         let thumbnailUrl = "";
+        let email = "";
+        let description = "";
 
         // فحص الاسم الإنجليزي من الاسم الأساسي (مثل: "مطعم كذا (Kaza Restaurant)")
         const englishMatch = name.match(/[\(\[]([A-Za-z0-9\s.,'&-]+)[\)\]]/);
@@ -1113,6 +1134,10 @@
           const webEl = card.querySelector('a[data-value="Website"], a[data-tooltip*="موقع" i], a[data-tooltip*="website" i], a[aria-label*="موقع" i], a[aria-label*="website" i], a[data-item-id*="authority"]') || findLabeledElement(card,"website","a[href]");
           if (webEl && webEl.href) {
             website = cleanWebsiteUrl(webEl.href);
+          }
+          if (!email) {
+            const mailEl = card.querySelector('a[href^="mailto:"]');
+            if (mailEl) email = decodeURIComponent(String(mailEl.getAttribute('href') || '').replace(/^mailto:/i, '').split('?')[0]).trim();
           }
 
           // صورة المعلم المصغرة
@@ -1233,6 +1258,13 @@
           cid,
           thumbnail_url: thumbnailUrl,
           attributes,
+          email,
+          description,
+          subcategory: category,
+          subCategory: category,
+          sourceCategory: category,
+          business_status: status,
+          contact: { ...(phone ? { phone } : {}), ...(website ? { website } : {}), ...(email ? { email } : {}), ...(phoneRaw ? { phoneRaw } : {}) },
           url: href,
           source: "Google Maps",
           searchKeyword: cellInfo ? (cellInfo.query || cellInfo.searchKeyword || "") : "",
@@ -1294,6 +1326,8 @@
       let priceLevel = "";
       let attributes = "";
       let thumbnailUrl = "";
+      let email = "";
+      let description = "";
 
       const card = link.closest('div.Nv2PK, div[role="article"]') || link.parentElement?.closest('div.Nv2PK') || link.parentElement;
       const { rating, reviewsCount, ratingRaw, reviewsCountRaw, sourceLocale, reviewsCountApproximate } = extractRatingMetrics(card);
@@ -1301,6 +1335,10 @@
         const webEl = card.querySelector('a[data-value="Website"], a[data-tooltip*="موقع" i], a[data-tooltip*="website" i], a[aria-label*="موقع" i], a[aria-label*="website" i], a[data-item-id*="authority"]') || findLabeledElement(card,"website","a[href]");
         if (webEl && webEl.href) {
           website = cleanWebsiteUrl(webEl.href);
+        }
+        if (!email) {
+          const mailEl = card.querySelector('a[href^="mailto:"]');
+          if (mailEl) email = decodeURIComponent(String(mailEl.getAttribute('href') || '').replace(/^mailto:/i, '').split('?')[0]).trim();
         }
 
         const imgEl = card.querySelector('img[src*="googleusercontent.com"], img[src*="ggpht.com"]');
@@ -1386,6 +1424,13 @@
         cid,
         thumbnail_url: thumbnailUrl,
         attributes,
+        email,
+        description,
+        subcategory: category,
+        subCategory: category,
+        sourceCategory: category,
+        business_status: status,
+        contact: { ...(phone ? { phone } : {}), ...(website ? { website } : {}), ...(email ? { email } : {}), ...(phoneRaw ? { phoneRaw } : {}) },
         url: link.href,
         source: "Google Maps",
         searchKeyword: cellInfo ? (cellInfo.query || cellInfo.searchKeyword || "") : "",

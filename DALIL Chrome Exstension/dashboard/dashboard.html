@@ -399,6 +399,15 @@
                     </div>
                   </div>
                 </div>
+                <div class="export-progress hidden" id="exportProgress" role="status" aria-live="polite">
+                  <div class="live-progress-info">
+                    <span id="exportProgressText"></span>
+                    <bdi id="exportProgressPercent">0%</bdi>
+                  </div>
+                  <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="exportProgressBarFill" style="width: 0%"></div>
+                  </div>
+                </div>
               </div>
 
               <div class="table-tabs-row">
@@ -963,6 +972,7 @@
   <!-- مكتبات النظام الجغرافي -->
   <script src="../lib/leaflet.js"></script>
   <script src="../lib/xlsx.full.min.js"></script>
+  <script src="../core/arabic-normalize.js"></script>
   <script src="../core/category-registry.js"></script>
   <script src="../core/search-languages.js"></script>
   <script src="../lib/taxonomy-engine.js"></script>

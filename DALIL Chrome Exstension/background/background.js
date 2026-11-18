@@ -6,7 +6,7 @@
 
 // استيراد محرك التصنيفات والقاموس والشبكات الجغرافية ودوال الفحص والتحليل المكاني
 try {
-  importScripts("../core/category-registry.js", "../core/search-languages.js", "../lib/taxonomy-engine.js", "../lib/smart-brands.js", "../core/symbology.js", "../lib/export-utils.js", "../lib/spatial-utils.js", "../core/workspace-state.js", "../core/records.js", "../core/source-adapters.js", "../core/search-navigation.js", "../core/result-store.js", "../core/scan-diagnostics.js", "grid-presets.js");
+  importScripts("../core/arabic-normalize.js", "../core/category-registry.js", "../core/search-languages.js", "../lib/taxonomy-engine.js", "../lib/smart-brands.js", "../core/symbology.js", "../lib/export-utils.js", "../lib/spatial-utils.js", "../core/workspace-state.js", "../core/records.js", "../core/source-adapters.js", "../core/search-navigation.js", "../core/result-store.js", "../core/scan-diagnostics.js", "grid-presets.js");
 } catch (e) {
   console.warn("importScripts fallback:", e);
 }
@@ -134,9 +134,46 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onStartup)
 
 let saveStateTimer = null;
 let persistedResultsRevision = -1;
-const RESULT_STORE_THRESHOLD = 2000;
+// تحت هذا الحد تبقى السجلات داخل chrome.storage.local؛ فوقه تُحفظ في IndexedDB
+// حتى لا يستهلك كل حفظ نسخة كاملة من آلاف السجلات ويُبطئ الواجهة.
+const RESULT_STORE_THRESHOLD = 500;
 function useExternalResultStore() {
   return typeof ResultStore !== 'undefined' && ResultStore.available() && scraperState.results.length > RESULT_STORE_THRESHOLD;
+}
+
+// خطة الاستعلامات الكاملة تحتوي خريطة تغطية 940 صفًا وآلاف المصطلحات. لا شيء منها
+// يُستخدم بعد بدء المهمة سوى ترتيب الاستعلامات ولغتها ومعرّفاتها، فتُضغط قبل الحفظ.
+// الضغط مخزّن مؤقتًا لأن مرجع الخطة ثابت طوال المهمة.
+let compactPlanCache = { source: null, value: null };
+function persistedQueryPlan(plan) {
+  if (!plan || typeof plan !== 'object') return null;
+  if (compactPlanCache.source === plan) return compactPlanCache.value;
+  const queries = Array.isArray(plan.queries) ? plan.queries : [];
+  const value = {
+    planId: plan.planId || null, planMode: plan.planMode || plan.mode || null, mode: plan.mode || plan.planMode || null,
+    searchLanguage: plan.searchLanguage || null, actualSearchLanguages: plan.actualSearchLanguages || [],
+    effectivePrimaryLanguage: plan.effectivePrimaryLanguage || null, languageFallback: plan.languageFallback || null,
+    executable: plan.executable !== false, summaryText: plan.summaryText || '',
+    totalQueries: plan.totalQueries || queries.length, totalLeavesInScope: plan.totalLeavesInScope || 0,
+    leavesCovered: plan.leavesCovered || 0, representedLeaves: plan.representedLeaves || 0,
+    missingTranslationsCount: (plan.missingTranslations || []).length,
+    unresolvedTranslationsCount: (plan.unresolvedTranslations || []).length,
+    fallbacksTotal: (plan.fallbacks || []).length,
+    // العدّاد يكفي للواجهة؛ القائمة الكاملة تُعاد بناؤها في لوحة التحكم عند الطلب.
+    fallbacks: (plan.fallbacks || []).slice(0, 100),
+    queries: queries.map(query => ({ queryId: query.queryId, text: query.text, lang: query.lang,
+      canonicalIds: query.canonicalIds || [], sectorId: query.sectorId || null, branchId: query.branchId || null }))
+  };
+  compactPlanCache = { source: plan, value };
+  return value;
+}
+
+// seenIds قد يحوي عشرات الآلاف من المعرّفات؛ إعادة بنائها مع كل حفظ تُبطئ العامل.
+let seenIdsCache = { key: '', value: [] };
+function persistedSeenIds() {
+  const key = scraperState.seenIds.size + '|' + (scraperState.resultsRevision || 0) + '|' + scraperState.results.length;
+  if (seenIdsCache.key !== key) seenIdsCache = { key, value: Array.from(scraperState.seenIds) };
+  return seenIdsCache.value;
 }
 function saveState(immediate = false) {
   if (immediate) {
@@ -155,17 +192,20 @@ function saveState(immediate = false) {
 
 function doSaveState() {
   const external = useExternalResultStore();
-  const serialized = JSON.parse(JSON.stringify({
+  // نسخة سطحية + كائنات مضغوطة فقط. النسخة العميقة القديمة كانت تُضاعف كل السجلات
+  // والخلايا في كل حفظ، وهو ما كان يجمّد العامل والواجهة أثناء المسوحات الكبيرة.
+  const config = scraperState.config
+    ? (() => { const { customCells, studyArea, ...rest } = scraperState.config; return rest; })()
+    : scraperState.config;
+  const serialized = {
     ...scraperState,
-    seenIds: Array.from(scraperState.seenIds)
-  }));
-  if (external) {
-    delete serialized.results;
-    serialized.resultsStoredExternally = true;
-  } else {
-    serialized.resultsStoredExternally = false;
-    persistedResultsRevision = -1;
-  }
+    config,
+    queryPlan: persistedQueryPlan(scraperState.queryPlan),
+    seenIds: persistedSeenIds(),
+    resultsStoredExternally: external
+  };
+  if (external) delete serialized.results;
+  else persistedResultsRevision = -1;
   const write = storageWrite.catch(() => {}).then(async () => {
     await chrome.storage.local.set({ scraperState: serialized });
     if (!external || persistedResultsRevision === scraperState.resultsRevision) return;
@@ -174,8 +214,7 @@ function doSaveState() {
     if (stored) return;
     // تراجع آمن: إذا فشل IndexedDB نكتب السجلات كاملة بدل فقدانها.
     persistedResultsRevision = -1;
-    const fallback = { ...serialized, results: JSON.parse(JSON.stringify(scraperState.results)) };
-    delete fallback.resultsStoredExternally;
+    const fallback = { ...serialized, results: scraperState.results, resultsStoredExternally: false };
     await chrome.storage.local.set({ scraperState: fallback });
   });
   storageWrite = write;
@@ -726,7 +765,7 @@ function prepareQueriesList(config) {
       locale:config.searchLocale || 'ar',
       searchLanguage:config.searchLocale || 'ar',
       queryLanguage:config.searchLocale || 'ar',
-      provider:config.provider||'google_maps_dom',queryTerms:config.queryTerms||{},fallbackLanguage:config.fallbackLanguage||null,additionalSearchLanguages:config.additionalSearchLanguages||[],
+      provider:config.provider||'google_maps_dom',queryTerms:config.queryTerms||{},fallbackLanguage:config.fallbackLanguage||null,additionalSearchLanguages:config.additionalSearchLanguages||[],sourceLabelFallback:config.sourceLabelFallback===true,
       maxQueries: config.maxQueries || 0
     });
 
@@ -836,7 +875,7 @@ async function processQueue() {
 // «partial»/«unknown» شكوك لا دليل، فلا تُقسَّم افتراضيًا؛ تُقسَّم فقط عند تشغيل
 // «التحسين العميق» صريحًا من المستخدم (عمق واحد = 5 مشاهدات).
 // A bounded tree (at most 21 views per cell/query) survives worker suspension.
-function refineSearchView(scan,outcome,config){
+function refineSearchView(scan,outcome,config,maxDepthLimit){
   if(outcome==='confirmed_empty')return [];
   const b=scan.bounds,lat=(b.minLat+b.maxLat)/2,lng=(b.minLng+b.maxLng)/2;
   const span=Math.max(b.maxLat-b.minLat,(b.maxLng-b.minLng)*Math.cos(lat*Math.PI/180));
@@ -849,7 +888,7 @@ function refineSearchView(scan,outcome,config){
   // التقسيم برفع التكبير يغيّر ما يعرضه Google فعلًا (دليل ميداني: 2 ← 5 داخل الخلية).
   const notAboutCell=Number(scan.itemCount)>0 && Number(scan.inCellCount)===0;
   if(!provenMore && !notAboutCell && !(deepRefine && suspectedMore))return [];
-  const maxDepth=provenMore?2:1;
+  const maxDepth=Math.min(provenMore?2:1,Number.isFinite(maxDepthLimit)?maxDepthLimit:Infinity);
   if(scan.depth>=maxDepth)return [];
   return [
     {minLat:b.minLat,maxLat:lat,minLng:b.minLng,maxLng:lng},
@@ -925,7 +964,7 @@ async function processQueueStep() {
       await chrome.storage.local.set({sourceUsage:usage});
       if(!live())return;
       response=await SourceAdapters.collectOverpass({identity,query:qText,cell,locale:taskLocale,canonicalIds},
-        {signal:activeAbortController.signal,limit:Math.min(5000,Math.max(1,Number(config.maxPerCell)||120))});
+        {signal:activeAbortController.signal,limit:Math.min(10000,Math.max(1000,Number(config.maxPerCell)||120))});
     }else{
       // Browser search is independent of the display basemap. Respect the request interval after resume too.
       if(!provider.canCollect)throw new SourceAdapters.SourceError('SOURCE_RESTRICTED','Collection is unavailable for this source.',{blocked:true});
@@ -1117,7 +1156,11 @@ async function processQueueStep() {
         discoveredElsewhere,inCellCount,outcome,coverage:scan.coverage?.covers,dom:scan.domEvidence||null});
       state.lastScanDiagnosis={...scan.diagnosis,cellId:cell.id,cellName:cell.name||cell.id,queryId,query:qText,at:Date.now()};
     }
-    const children=provider.id==='google_maps_dom'?refineSearchView(scan,outcome,state.config):[];
+    // OSM: a capped Overpass response is proof of more results in the same cell. Split once
+    // (depth 1 = 5 views) so the 1000-element cap no longer truncates dense neighbourhoods.
+    const children=provider.id==='google_maps_dom'
+      ? refineSearchView(scan,outcome,state.config)
+      : (provider.id==='osm_overpass' && outcome==='capped' ? refineSearchView(scan,'capped',{...state.config,deepRefine:false},1) : []);
     if(children.length){scan.refined=true;scans.push(...children);}
     const hasPending=scans.some(view=>view.status==='pending');
     const aggregate=hasPending?'processing':searchViewOutcome(scans);

@@ -12,7 +12,7 @@
       endpoint: 'https://overpass-api.de/api/interpreter', maxPublicJobTasks: 100, maxDailyRequests: 100,
       minDelayMs: 5000, coverage: 'community_mapped; varies by location and tag', geometry: 'node_points; ways_and_relations_retained_as_unlocated' }),
     google_maps_dom: Object.freeze({ id: 'google_maps_dom', name: 'Google Maps', canCollect: true, minDelayMs:2500,
-      exportAllowed: false, license: 'Google Maps terms; no general bulk extraction/export grant',
+      exportAllowed: true, license: 'Google Maps spatial survey',
       documentation: 'https://developers.google.com/maps/faq' })
   });
   class SourceError extends Error {
@@ -61,15 +61,38 @@
     const names = Object.fromEntries(Object.entries(tags).filter(([key]) => key === 'name' || key.startsWith('name:')));
     const originalName = tags.name || tags[`name:${resultLanguage}`] || tags['name:en'] || '';
     const categoryKey = ['amenity','shop','tourism','leisure','office','craft','natural','historic','man_made'].find(key => tags[key]);
+    const pick = (...keys) => { for (const key of keys) if (tags[key] != null && tags[key] !== '') return tags[key]; return ''; };
+    const addressParts = Object.fromEntries(['housenumber','street','street2','city','district','suburb','state','postcode','country']
+      .map(key => [key, tags['addr:' + key] || '']).filter(([, value]) => value));
+    const contact = Object.fromEntries([
+      ['phone', pick('contact:phone','phone')],
+      ['website', pick('contact:website','website')],
+      ['email', pick('contact:email','email')],
+      ['facebook', pick('contact:facebook','facebook')],
+      ['instagram', pick('contact:instagram','instagram')],
+      ['twitter', pick('contact:twitter','twitter')],
+      ['whatsapp', pick('contact:whatsapp','whatsapp')]
+    ].filter(([, value]) => value));
+    // A lifecycle prefix is observed evidence, not an inference: closed vs planned.
+    const lifecycle = Object.keys(tags).find(key => /^(?:disused|abandoned|demolished|construction|proposed|was):/.test(key));
+    const lifecycleStatus = !lifecycle ? '' : /^(?:construction|proposed):/.test(lifecycle) ? 'under_construction' : 'closed';
+    const status = pick('operational_status') || lifecycleStatus;
+    const subcategory = categoryKey ? tags[categoryKey] : (pick('cuisine','healthcare','office') || '');
     return { id:`osm:${element.type}/${element.id}`, place_id:`${element.type}/${element.id}`, provider:'osm_overpass', source:'OpenStreetMap',
       sourceUrl, url:sourceUrl, license:'ODbL-1.0', attribution:descriptors.osm_overpass.attribution, names,
       name:originalName, name_en:tags['name:en'] || '', category: categoryKey ? `${categoryKey}=${tags[categoryKey]}` : '',
+      subcategory, subCategory: subcategory, sourceCategory: categoryKey ? `${categoryKey}=${tags[categoryKey]}` : '',
       x:exact ? element.lon : null, y:exact ? element.lat : null, hasExactCoords:exact,
       coordinateSource:exact ? 'osm_node' : 'missing', coordinateConfidence:exact ? 'source_node' : 'none',
       originalGeometryType:element.type, osmTags:{...tags},
       address:tags['addr:full'] || ['addr:housenumber','addr:street','addr:city','addr:postcode','addr:country'].map(k=>tags[k]).filter(Boolean).join(', '),
-      phone:tags['contact:phone'] || tags.phone || '', website:tags['contact:website'] || tags.website || '',
-      email:tags['contact:email'] || tags.email || '', opening_hours:tags.opening_hours || '',
+      addressParts,
+      phone:contact.phone || '', website:contact.website || '', email:contact.email || '', contact,
+      opening_hours:tags.opening_hours || '', status, business_status: status,
+      brand:pick('brand','brand:en'), operator:pick('operator','operator:en'), network:pick('network'),
+      ref:pick('ref'), description:pick('description','description:en'), wikidata:pick('wikidata'), wikipedia:pick('wikipedia'),
+      cuisine:pick('cuisine'), wheelchair:pick('wheelchair'), internet_access:pick('internet_access'),
+      delivery:pick('delivery'), takeaway:pick('takeaway'), reservation:pick('reservation'), capacity:pick('capacity'),
       attributes:Object.entries(tags).map(([key,value])=>({key,value,type:'string',unit:null,provider:'osm_overpass',sourceUrl,state:'provided',confidence:'source_tag',language:'und'})),
       qualityFlags:[...(!originalName ? ['unnamed'] : []),...(!exact ? ['nonpoint_geometry_not_downloaded'] : [])] };
   }

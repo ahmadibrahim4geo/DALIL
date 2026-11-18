@@ -35,6 +35,17 @@ document.addEventListener("DOMContentLoaded", () => {
   let lastProcessedCount = -1;
   let lastCellsCount = -1;
   let renderedOwnerScopeKey = "";
+  // حالة عرض المعالم: مولّد الجيل يمنع رسم دفعي قديم من الكتابة فوق أحدث عرض.
+  let markerRenderGeneration = 0;
+  let canvasRenderer = null;
+  // شجرة الفئات وشرائح الظاهرات: مفاتيح إعادة البناء والتحديث المؤجل.
+  let taxonomyRenderedKey = "";
+  let taxonomyDelegateBound = false;
+  let selectionDerivedTimer = null;
+  const taxonomySectorLeaves = new Map();
+  const taxonomyBranchLeaves = new Map();
+  // فهرس نص البحث لكل سجل (WeakMap: يُحرَّر مع استبدال السجلات).
+  const searchEntryCache = new WeakMap();
   let fetchThrottleTimer = null;
   let fetchingResults = false;
   let refreshQueued = false;
@@ -206,6 +217,11 @@ document.addEventListener("DOMContentLoaded", () => {
       optNotice: "زيادة عدد الخلايا أو الظاهرات ترفع زمن المسح بشكل خطي. راجع التقدير قبل البدء.",
 
       btnExport: "تصدير",
+      exportPreparing: "جارٍ تجهيز التصدير…",
+      exportTransferring: "جارٍ نقل السجلات إلى المعالج المحلي…",
+      exportBuilding: "جارٍ إنشاء الملف…",
+      exportDone: "اكتمل التصدير",
+      exportFailed: "تعذر إكمال التصدير",
       tableTitle: "سجل المعالم والظواهر المستخرجة",
       tableSubtitle: "فلترة مستقلة لكل فئة وظاهرة لمنع التداخل",
       tableFoot: "البيانات محفوظة محلياً داخل المتصفح فقط",
@@ -381,6 +397,11 @@ document.addEventListener("DOMContentLoaded", () => {
       optNotice: "More cells or features increase survey time linearly. Review the estimate before starting.",
 
       btnExport: "Export",
+      exportPreparing: "Preparing export…",
+      exportTransferring: "Transferring records to the local worker…",
+      exportBuilding: "Building the file…",
+      exportDone: "Export complete",
+      exportFailed: "Export could not finish",
       tableTitle: "Extracted Places & Features",
       tableSubtitle: "Independent filtering per category and feature",
       tableFoot: "Data is stored locally inside this browser only",
@@ -423,7 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return typeof value==="string"?{categoryId:value,category:value}:value;
   }
   function getSearchLocale(){const input=document.getElementById("searchLocale");return SearchLanguages.normalizeLocale(input?.value==="__custom__"?document.getElementById("customSearchLocale")?.value:input?.value||"ar");}
-  function buildUiQueryPlan(targets=targetPhenomena){const locale=getSearchLocale();return TaxonomyEngine.buildQueryPlan({selectedLeaves:targets,searchLanguage:locale,uiLanguage:currentLang,provider:document.getElementById("dataSource")?.value||"google_maps_dom",mode:selectQueryPlanMode?.value||"balanced",bilingualEnabled:['ar','en'].includes(SearchLanguages.localeInfo(locale).language)&&!!sideBilingualToggle?.checked,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?'en':null});}
+  function buildUiQueryPlan(targets=targetPhenomena){const locale=getSearchLocale();return TaxonomyEngine.buildQueryPlan({selectedLeaves:targets,searchLanguage:locale,uiLanguage:currentLang,provider:document.getElementById("dataSource")?.value||"google_maps_dom",mode:selectQueryPlanMode?.value||"balanced",bilingualEnabled:['ar','en'].includes(SearchLanguages.localeInfo(locale).language)&&!!sideBilingualToggle?.checked,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?'en':null,sourceLabelFallback:true});}
   function renderSearchLanguageChoices(locale=null){
     if(typeof SearchLanguages==="undefined")return;
     const select=document.getElementById("searchLocale");if(!select)return;
@@ -714,7 +735,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnNextPage = document.getElementById("btnNextPage");
   let currentPage = 1;
   const pageSize = 100;
-  let canvasRenderer = null;
 
   const btnExportKml = document.getElementById("btnExportKml");
   const btnExportKmz = document.getElementById("btnExportKmz");
@@ -929,45 +949,95 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  let exportInFlight = false;
+  let exportProgressHideTimer = null;
+
+  function exportProgressPanel() {
+    return {
+      panel: document.getElementById("exportProgress"),
+      text: document.getElementById("exportProgressText"),
+      percent: document.getElementById("exportProgressPercent"),
+      fill: document.getElementById("exportProgressBarFill")
+    };
+  }
+
+  function showExportProgress(label) {
+    const ui = exportProgressPanel();
+    if (exportProgressHideTimer) { clearTimeout(exportProgressHideTimer); exportProgressHideTimer = null; }
+    if (!ui.panel) return;
+    ui.panel.classList.remove("hidden");
+    if (ui.text) ui.text.textContent = label || t("exportPreparing");
+    if (ui.percent) ui.percent.textContent = "0%";
+    if (ui.fill) ui.fill.style.width = "0%";
+  }
+
+  function updateExportProgress(progress) {
+    const ui = exportProgressPanel();
+    if (!ui.panel || !progress) return;
+    const percent = Math.max(0, Math.min(100, Number(progress.percent) || 0));
+    if (ui.text) {
+      const label = progress.phase === "transfer" ? t("exportTransferring")
+        : progress.phase === "done" ? t("exportDone")
+        : progress.phase === "selection" ? t("exportPreparing")
+        : t("exportBuilding");
+      ui.text.textContent = progress.total ? `${label} (${progress.processed || 0}/${progress.total})` : label;
+    }
+    if (ui.percent) ui.percent.textContent = percent + "%";
+    if (ui.fill) ui.fill.style.width = percent + "%";
+  }
+
+  function hideExportProgress(delay = 1200) {
+    const ui = exportProgressPanel();
+    if (!ui.panel) return;
+    if (exportProgressHideTimer) clearTimeout(exportProgressHideTimer);
+    exportProgressHideTimer = setTimeout(() => {
+      exportProgressHideTimer = null;
+      ui.panel.classList.add("hidden");
+    }, delay);
+  }
+
+  async function runWorkerExport(format, results, prefix = "dalil_places_survey", options = {}) {
+    const records = Array.isArray(results) ? results : [];
+    if (!records.length) {
+      alert(currentLang === "ar" ? "لا توجد سجلات قابلة للتصدير." : "There are no records available for export.");
+      return;
+    }
+    if (exportInFlight) {
+      alert(currentLang === "ar" ? "يوجد تصدير قيد التنفيذ. انتظر اكتماله ثم أعد المحاولة." : "An export is already running. Wait for it to finish, then try again.");
+      return;
+    }
+    exportInFlight = true;
+    showExportProgress(t("exportPreparing"));
+    try {
+      if (ExportUtils.setLanguage) ExportUtils.setLanguage(currentLang);
+      await ExportUtils.exportInWorker(format, records, prefix, null, {
+        ...options,
+        language: currentLang,
+        onProgress: updateExportProgress
+      });
+      updateExportProgress({ phase: "done", processed: records.length, total: records.length, percent: 100 });
+      hideExportProgress();
+    } catch (error) {
+      hideExportProgress(0);
+      showExportFailure(error);
+    } finally {
+      exportInFlight = false;
+    }
+  }
+
   function setupRecordsExportButtons() {
-    const btnExportExcelSpec = document.getElementById("btnExportExcelSpec");
-    const btnExportKmlSpec = document.getElementById("btnExportKmlSpec");
-    const btnExportKmzSpec = document.getElementById("btnExportKmzSpec");
-    const btnExportGeoJsonSpec = document.getElementById("btnExportGeoJsonSpec");
-    const btnExportCsvSpec = document.getElementById("btnExportCsvSpec");
-    const btnExportJsonSpec = document.getElementById("btnExportJsonSpec");
-
-    if (btnExportExcelSpec) {
-      btnExportExcelSpec.addEventListener("click", () => {
-        ExportUtils.exportToExcel(allResults, "dalil_places_survey");
-      });
+    const buttons = [
+      ["btnExportExcelSpec", "xlsx"],
+      ["btnExportKmlSpec", "kml"],
+      ["btnExportKmzSpec", "kmz"],
+      ["btnExportGeoJsonSpec", "geojson"],
+      ["btnExportCsvSpec", "csv"],
+      ["btnExportJsonSpec", "json"]
+    ];
+    for (const [id, format] of buttons) {
+      const button = document.getElementById(id);
+      if (button) button.addEventListener("click", () => runWorkerExport(format, allResults));
     }
-    if (btnExportKmlSpec) {
-      btnExportKmlSpec.addEventListener("click", () => {
-        ExportUtils.exportToKml(allResults, "dalil_places_survey");
-      });
-    }
-    if (btnExportKmzSpec) {
-      btnExportKmzSpec.addEventListener("click", () => {
-        ExportUtils.exportToKmz(allResults, "dalil_places_survey");
-      });
-    }
-    if (btnExportGeoJsonSpec) {
-      btnExportGeoJsonSpec.addEventListener("click", () => {
-        ExportUtils.exportToGeoJson(allResults, "dalil_places_survey");
-      });
-    }
-    if (btnExportCsvSpec) {
-      btnExportCsvSpec.addEventListener("click", () => {
-        ExportUtils.exportToCsv(allResults, "dalil_places_survey");
-      });
-    }
-    if (btnExportJsonSpec) {
-      btnExportJsonSpec.addEventListener("click", () => {
-        ExportUtils.exportToJson(allResults, "dalil_places_survey");
-      });
-    }
-
   }
 
   function setupRailNav() {
@@ -1243,15 +1313,96 @@ document.addEventListener("DOMContentLoaded", () => {
     return '<img class="'+className+'" data-symbol-id="'+escapeAttr(symbol.symbolId)+'" src="'+safeAssetUrl(symbol.pngPath)+'" alt="" width="22" height="22" loading="lazy" decoding="async">';
   }
 
+  // شجرة الفئات: تُبنى مرة واحدة لكل (لغة + نص تصفية)، وبعدها يُحدَّث التحديد في مكانه.
+  // إعادة بناء 31 قطاعًا و114 فرعًا و940 ورقة عند كل نقرة كانت السبب الرئيسي لثقل الواجهة.
+  function syncTaxonomySelection() {
+    if (!taxonomyTreeList) return;
+    const selected = new Set(targetPhenomena);
+    const leaves = taxonomyTreeList.querySelectorAll(".tax-leaf-btn");
+    for (const button of leaves) {
+      const isSelected = selected.has(button.getAttribute("data-leaf"));
+      button.classList.toggle("selected", isSelected);
+      const marker = button.lastElementChild;
+      if (marker) {
+        const text = isSelected ? "✓" : "+";
+        if (marker.textContent !== text) marker.textContent = text;
+      }
+    }
+    for (const branch of taxonomyTreeList.querySelectorAll(".tax-branch-item")) {
+      const ids = taxonomyBranchLeaves.get(branch.getAttribute("data-br-id")) || [];
+      const check = branch.querySelector(".br-check");
+      if (check) check.checked = ids.length > 0 && ids.every(id => selected.has(id));
+    }
+    for (const card of taxonomyTreeList.querySelectorAll(".tax-sector-card")) {
+      const ids = taxonomySectorLeaves.get(card.id.replace("taxSector_", "")) || [];
+      const check = card.querySelector(".sec-check");
+      if (check) check.checked = ids.length > 0 && ids.every(id => selected.has(id));
+    }
+  }
+
+  // القطاع/الفرع يضيف مجموعة أوراق دفعة واحدة؛ نُطبّع الاختيار مرة واحدة بدل حلقة بحث لكل ورقة.
+  function selectLeaves(ids, shouldSelect) {
+    const wanted = new Set(ids);
+    if (shouldSelect) {
+      const current = new Set(targetPhenomena);
+      for (const id of wanted) if (!current.has(id)) { current.add(id); targetPhenomena.push(id); }
+    } else {
+      targetPhenomena = targetPhenomena.filter(value => !wanted.has(value));
+    }
+  }
+
+  function onTaxonomyTreeClick(event) {
+    const target = event.target;
+    if (!target || typeof target.closest !== "function") return;
+    const leafButton = target.closest(".tax-leaf-btn");
+    if (leafButton) {
+      event.stopPropagation();
+      const leaf = leafButton.getAttribute("data-leaf");
+      if (!leaf) return;
+      if (targetPhenomena.includes(leaf)) targetPhenomena = targetPhenomena.filter(value => value !== leaf);
+      else targetPhenomena.push(leaf);
+      renderPhenomenaChips();
+      syncTaxonomySelection();
+      return;
+    }
+    const sectorCheck = target.closest(".sec-check");
+    if (sectorCheck) {
+      event.stopPropagation();
+      selectLeaves(taxonomySectorLeaves.get(sectorCheck.getAttribute("data-sec-id")) || [], sectorCheck.checked);
+      renderPhenomenaChips();
+      syncTaxonomySelection();
+      return;
+    }
+    const branchCheck = target.closest(".br-check");
+    if (branchCheck) {
+      event.stopPropagation();
+      selectLeaves(taxonomyBranchLeaves.get(branchCheck.getAttribute("data-br-id")) || [], branchCheck.checked);
+      renderPhenomenaChips();
+      syncTaxonomySelection();
+      return;
+    }
+    const header = target.closest(".tax-sector-header");
+    if (header) header.closest(".tax-sector-card")?.classList.toggle("expanded");
+  }
+
   function renderTaxonomyTree() {
     if (!taxonomyTreeList) return;
     if (typeof TaxonomyEngine === "undefined") {
       taxonomyTreeList.innerHTML = `<div class="tax-empty tax-empty-error">${currentLang === "ar" ? "يتم تحميل مكتبة الفئات…" : "Loading category library…"}</div>`;
+      taxonomyRenderedKey = "";
+      return;
+    }
+
+    // نفس اللغة ونفس نص التصفية يعني الشجرة نفسها؛ تحديث التحديد وحده يكفي.
+    const renderKey = currentLang + "|" + (taxFilterText || "");
+    if (renderKey === taxonomyRenderedKey && taxonomyTreeList.childElementCount) {
+      syncTaxonomySelection();
       return;
     }
 
     const sectors = TaxonomyEngine.getLibrarySectors(taxFilterText);
-    taxonomyTreeList.innerHTML = "";
+    taxonomySectorLeaves.clear();
+    taxonomyBranchLeaves.clear();
 
     if (sectors.length === 0) {
       taxonomyTreeList.innerHTML = `
@@ -1259,26 +1410,56 @@ document.addEventListener("DOMContentLoaded", () => {
           ${currentLang === "ar" ? "لم يتم العثور على أي فئة مطابقة للبحث." : "No categories found matching your query."}
         </div>
       `;
+      taxonomyRenderedKey = renderKey;
       return;
     }
 
+    const selectedSet = new Set(targetPhenomena);
+    const cards = [];
     sectors.forEach((sec) => {
-      const allLeafLabels = sec.branches.flatMap(br=>TaxonomyEngine.getDisplayCategories(br.id).map(c=>c.canonicalId));
-      const isSectorFullySelected = allLeafLabels.length > 0 && allLeafLabels.every((l) => targetPhenomena.includes(l));
-
-      const card = document.createElement("div");
-      card.className = "tax-sector-card" + (taxFilterText ? " expanded" : "");
-      card.id = `taxSector_${sec.id}`;
+      const allLeafLabels = sec.branches.flatMap(br => TaxonomyEngine.getDisplayCategories(br.id).map(c => c.canonicalId));
+      taxonomySectorLeaves.set(sec.id, allLeafLabels);
+      const isSectorFullySelected = allLeafLabels.length > 0 && allLeafLabels.every(l => selectedSet.has(l));
 
       const secName = currentLang === "ar" ? sec.name_ar : sec.name_en;
-      const secSub = "";
 
-      card.innerHTML = `
+      const branchHtml = sec.branches
+        .map((br) => {
+          const brLeaves = TaxonomyEngine.getDisplayCategories(br.id, taxFilterText ? br.leaves : null);
+          const branchIds = brLeaves.map(c => c.canonicalId);
+          taxonomyBranchLeaves.set(br.id, branchIds);
+          const isBrSelected = branchIds.length > 0 && branchIds.every(c => selectedSet.has(c));
+          const brName = currentLang === "ar" ? br.name_ar : br.name_en;
+
+          return `
+                <div class="tax-branch-item" data-br-id="${br.id}">
+                  <div class="tax-branch-header">
+                    <input type="checkbox" class="tax-check br-check" data-br-id="${br.id}" title="${currentLang === "ar" ? "اختيار الفرع بالكامل" : "Select Entire Branch"}" ${isBrSelected ? "checked" : ""}>
+                    ${categorySymbolHtml(br.id, "tax-symbol")}<span class="tax-branch-name">${escapeHtml(brName)}</span>
+                    
+                  </div>
+                  <div class="tax-leaves-grid">
+                    ${brLeaves
+                      .map((category) => {
+                        const leaf = category.canonicalId, isSelected = selectedSet.has(leaf);
+                        const variants = category.searchTerms || [], aliases = variants.filter(v => v.kind === "local_alias").map(v => v.labels[currentLang]), descriptors = variants.filter(v => v.kind === "descriptive_variant").map(v => v.labels[currentLang]);
+                        const title = [aliases.length ? t("categoryAliases") + ": " + aliases.join(", ") : "", descriptors.length ? t("categoryDescriptors") + ": " + descriptors.join(", ") : ""].filter(Boolean).join(" · ");
+                        return '<button type="button" class="tax-leaf-btn ' + (isSelected ? 'selected' : '') + '" data-leaf="' + escapeAttr(leaf) + '" title="' + escapeAttr(title) + '">' + categorySymbolHtml(leaf, "tax-symbol") + '<span class="tax-leaf-text"><span>' + escapeHtml(category.labels[currentLang] || category.labels.en || leaf) + '</span><small class="tax-concept-meta">' + escapeHtml(t(category.googlePlaceType ? "googleTypeLabel" : "dalilConceptLabel")) + '</small></span><span>' + (isSelected ? "✓" : "+") + '</span></button>';
+                      })
+                      .join("")}
+                  </div>
+                </div>
+              `;
+        })
+        .join("");
+
+      cards.push(`
+        <div class="tax-sector-card${taxFilterText ? " expanded" : ""}" id="taxSector_${sec.id}">
         <div class="tax-sector-header" data-sec-id="${sec.id}" title="${currentLang === "ar" ? "انقر لتوسيع/طي الفروع" : "Click to expand/collapse"}">
           <div class="tax-sector-left">
             <input type="checkbox" class="tax-check sec-check" data-sec-id="${sec.id}" title="${currentLang === "ar" ? "اختيار الفئة والقطاع كاملاً" : "Select Entire Category"}" ${isSectorFullySelected ? "checked" : ""}>
             <div class="tax-sector-title">
-              ${categorySymbolHtml(sec.id,"tax-symbol")}
+              ${categorySymbolHtml(sec.id, "tax-symbol")}
               <span class="tax-sector-name">${escapeHtml(secName)}</span>
               
             </div>
@@ -1289,94 +1470,19 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
         <div class="tax-branches-list">
-          ${sec.branches
-            .map((br) => {
-              const brLeaves = TaxonomyEngine.getDisplayCategories(br.id,taxFilterText?br.leaves:null);
-              const isBrSelected = brLeaves.length > 0 && brLeaves.every((c) => targetPhenomena.includes(c.canonicalId));
-              const brName = currentLang === "ar" ? br.name_ar : br.name_en;
-              const brSub = "";
-
-              return `
-                <div class="tax-branch-item" data-br-id="${br.id}">
-                  <div class="tax-branch-header">
-                    <input type="checkbox" class="tax-check br-check" data-br-id="${br.id}" title="${currentLang === "ar" ? "اختيار الفرع بالكامل" : "Select Entire Branch"}" ${isBrSelected ? "checked" : ""}>
-                    ${categorySymbolHtml(br.id,"tax-symbol")}<span class="tax-branch-name">${escapeHtml(brName)}</span>
-                    
-                  </div>
-                  <div class="tax-leaves-grid">
-                    ${brLeaves
-                      .map((category) => {
-                        const leaf=category.canonicalId,isSelected=targetPhenomena.includes(leaf);
-                        const variants=category.searchTerms||[],aliases=variants.filter(v=>v.kind==="local_alias").map(v=>v.labels[currentLang]),descriptors=variants.filter(v=>v.kind==="descriptive_variant").map(v=>v.labels[currentLang]);
-                        const title=[aliases.length?t("categoryAliases")+": "+aliases.join(", "):"",descriptors.length?t("categoryDescriptors")+": "+descriptors.join(", "):""].filter(Boolean).join(" · ");
-                        return '<button type="button" class="tax-leaf-btn '+(isSelected?'selected':'')+'" data-leaf="'+escapeAttr(leaf)+'" title="'+escapeAttr(title)+'">'+categorySymbolHtml(leaf,"tax-symbol")+'<span class="tax-leaf-text"><span>'+escapeHtml(category.labels[currentLang]||category.labels.en||leaf)+'</span><small class="tax-concept-meta">'+escapeHtml(t(category.googlePlaceType?"googleTypeLabel":"dalilConceptLabel"))+'</small></span><span>'+(isSelected?"✓":"+")+'</span></button>';
-                      })
-                      .join("")}
-                  </div>
-                </div>
-              `;
-            })
-            .join("")}
+          ${branchHtml}
         </div>
-      `;
-
-      // توسيع وطي بطاقة القطاع
-      const header = card.querySelector(".tax-sector-header");
-      header.addEventListener("click", (e) => {
-        if (e.target.classList.contains("sec-check")) return;
-        card.classList.toggle("expanded");
-      });
-
-      // اختيار القطاع كاملاً (Master Sector Checkbox)
-      const secCheck = card.querySelector(".sec-check");
-      secCheck.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (secCheck.checked) {
-          allLeafLabels.forEach((l) => {
-            if (!targetPhenomena.includes(l)) targetPhenomena.push(l);
-          });
-        } else {
-          targetPhenomena = targetPhenomena.filter((p) => !allLeafLabels.includes(p));
-        }
-        renderPhenomenaChips();
-        renderTaxonomyTree();
-      });
-
-      // اختيار الفرع كاملاً (Branch Checkbox)
-      card.querySelectorAll(".br-check").forEach((brCheck) => {
-        brCheck.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const brId = brCheck.getAttribute("data-br-id");
-          const leaves = TaxonomyEngine.getDisplayCategories(brId).map(c=>c.canonicalId);
-          if (brCheck.checked) {
-            leaves.forEach((l) => {
-              if (!targetPhenomena.includes(l)) targetPhenomena.push(l);
-            });
-          } else {
-            targetPhenomena = targetPhenomena.filter((p) => !leaves.includes(p));
-          }
-          renderPhenomenaChips();
-          renderTaxonomyTree();
-        });
-      });
-
-      // اختيار ظاهرة فردية (Leaf Click)
-      card.querySelectorAll(".tax-leaf-btn").forEach((leafBtn) => {
-        leafBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const leaf = leafBtn.getAttribute("data-leaf");
-          if (targetPhenomena.includes(leaf)) {
-            targetPhenomena = targetPhenomena.filter((p) => p !== leaf);
-          } else {
-            targetPhenomena.push(leaf);
-          }
-          renderPhenomenaChips();
-          renderTaxonomyTree();
-        });
-      });
-
-      taxonomyTreeList.appendChild(card);
+        </div>
+      `);
     });
+
+    // تحليل واحد لكل الشجرة بدل 1140 عنصرًا مع مستمع منفصل لكل منها.
+    taxonomyTreeList.innerHTML = cards.join("");
+    taxonomyRenderedKey = renderKey;
+    if (!taxonomyDelegateBound) {
+      taxonomyDelegateBound = true;
+      taxonomyTreeList.addEventListener("click", onTaxonomyTreeClick);
+    }
   }
 
   function addPhenomenonFromInput() {
@@ -1456,6 +1562,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // الأسطورة ومراجعة الترجمة تُعيدان بناء خطة كاملة لكل 940 ورقة. تُؤجَّل قليلًا بعد
+  // آخر تغيير حتى لا يتجمد زر التحديد أثناء اختيار جماعي سريع.
+  function scheduleDerivedUpdates() {
+    const run = () => { selectionDerivedTimer = null; try { renderSymbolLegend(); updateQueryReview(); } catch (error) { console.warn('[DALIL] derived UI update failed:', error); } };
+    if (typeof setTimeout !== "function") { run(); return; }
+    if (selectionDerivedTimer) clearTimeout(selectionDerivedTimer);
+    selectionDerivedTimer = setTimeout(run, 120);
+  }
+
   function renderPhenomenaChips() {
     activePhenomenaContainer.innerHTML = "";
     activePhenomenaCount.textContent = targetPhenomena.length;
@@ -1474,12 +1589,15 @@ document.addEventListener("DOMContentLoaded", () => {
       if (quickChips) {
         quickChips.innerHTML = `<span class="caption" style="color:var(--muted);">${currentLang === "ar" ? "لم تحدد ظواهر بعد" : "No features yet"}</span>`;
       }
-      renderSymbolLegend();updateQueryReview();
+      scheduleDerivedUpdates();
       return;
     }
 
     emptyPhenomenaNotice.classList.add("hidden");
 
+    // بناء الشرائح في مستند منفصل ثم إدراجها مرة واحدة (940 شريحة عند التحديد الشامل).
+    const chipFragment = document.createDocumentFragment();
+    const quickFragment = quickChips ? document.createDocumentFragment() : null;
     targetPhenomena.forEach((p, idx) => {
       const chip = document.createElement("div");
       chip.className = "phenom-chip";
@@ -1498,10 +1616,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      activePhenomenaContainer.appendChild(chip);
+      chipFragment.appendChild(chip);
 
       // إضافة شريحة سريعة في شريط مساحة العمل
-      if (quickChips) {
+      if (quickFragment) {
         const quickPill = document.createElement("div");
         quickPill.className = "quick-phenom-pill";
         quickPill.setAttribute("data-phenom-text", targetKey(p));
@@ -1514,14 +1632,16 @@ document.addEventListener("DOMContentLoaded", () => {
           e.stopPropagation();
           removePhenomenon(idx);
         });
-        quickChips.appendChild(quickPill);
+        quickFragment.appendChild(quickPill);
       }
     });
 
+    activePhenomenaContainer.appendChild(chipFragment);
+    if (quickChips && quickFragment) quickChips.appendChild(quickFragment);
+
     updatePhenomenaChipsStatus(activeCompletedQueries, activeCurrentQuery, activeQueryStats);
     savePhenomenaState();
-    renderSymbolLegend();
-    updateQueryReview();
+    scheduleDerivedUpdates();
   }
 
   function savePhenomenaState() {
@@ -2199,7 +2319,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let selectedLocale,uiPlan;
       try{selectedLocale=getSearchLocale();uiPlan=buildUiQueryPlan();}catch(error){alert(t("INVALID_LOCALE"));switchView("setup");return;}
       if(!uiPlan.executable){updateQueryReview();switchView("phenomena");document.getElementById("translationReviewPanel")?.scrollIntoView({block:"center"});alert(t("MISSING_QUERY_TRANSLATION"));return;}
-      const config={provider:(document.getElementById("dataSource")||{}).value||"google_maps_dom",searchLocale:selectedLocale,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?"en":null,uiLanguage:currentLang,areaVersion:workspaceRevision,query:targetPhenomena[0],queriesToRun:[...targetPhenomena],queryPlanMode:selectQueryPlanMode&&selectQueryPlanMode.value||"balanced",studyArea:currentStudyArea,bilingualEnabled:!sideBilingualToggle.disabled&&sideBilingualToggle.checked,clearPreviousData:!checkAccumulateData.checked,customCells:allCells,customBounds:currentStudyArea.bounds,zoom:settingZoomLevel.value==="auto"?"auto":parseInt(settingZoomLevel.value,10)||16,delayMs:parseInt(settingDelayMs.value,10)||1200,autoPan:checkAutoPanCamera.checked,zoomActive:checkZoomActiveCell.checked,autoDedup:checkAutoDedup.checked,deepRefine:!!document.getElementById("checkDeepRefine")?.checked};
+      const config={provider:(document.getElementById("dataSource")||{}).value||"google_maps_dom",searchLocale:selectedLocale,queryTerms:queryTermOverrides,fallbackLanguage:document.getElementById("allowEnglishSearchFallback")?.checked?"en":null,sourceLabelFallback:true,uiLanguage:currentLang,areaVersion:workspaceRevision,query:targetPhenomena[0],queriesToRun:[...targetPhenomena],queryPlanMode:selectQueryPlanMode&&selectQueryPlanMode.value||"balanced",studyArea:currentStudyArea,bilingualEnabled:!sideBilingualToggle.disabled&&sideBilingualToggle.checked,clearPreviousData:!checkAccumulateData.checked,customCells:allCells,customBounds:currentStudyArea.bounds,zoom:settingZoomLevel.value==="auto"?"auto":parseInt(settingZoomLevel.value,10)||16,delayMs:parseInt(settingDelayMs.value,10)||1200,autoPan:checkAutoPanCamera.checked,zoomActive:checkZoomActiveCell.checked,autoDedup:checkAutoDedup.checked,deepRefine:!!document.getElementById("checkDeepRefine")?.checked};
       btnTopStart.disabled=true;
       chrome.runtime.sendMessage({action:"START_SCRAPING",config},response=>{
         btnTopStart.disabled=false;
@@ -2235,8 +2355,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const details=error?.details;
     if(error?.code==='EXPORT_RESTRICTED'&&details){
       alert(currentLang!=="en"
-        ? `التصدير متوقف: ${details.restricted} من ${details.total} سجلًا لا يمكن تصديرها لأن مصدرها (خرائط جوجل) لا يسمح بالاستخراج المجمّع.\nالسجلات القابلة للتصدير: ${details.exportable||0}.\n\nالحل: استخدم مصدر OpenStreetMap، أو استورد ملفًا تملك حقوق إعادة استخدامه.`
-        : `Export blocked: ${details.restricted} of ${details.total} records cannot be exported because their source (Google Maps) does not permit bulk extraction.\nExportable records: ${details.exportable||0}.\n\nUse OpenStreetMap, or import a file whose reuse rights you own.`);
+        ? `التصدير متوقف: ${details.restricted} من ${details.total} سجلًا لا يمكن تصديرها بسبب قيود المصدر.\nالسجلات القابلة للتصدير: ${details.exportable||0}.`
+        : `Export blocked: ${details.restricted} of ${details.total} records cannot be exported due to source restrictions.\nExportable records: ${details.exportable||0}.`);
       return;
     }
     alert(error?.message||String(error));
@@ -2244,14 +2364,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setupExportButtons(){
     const controls=[
-      ["btnExportKml","exportToKml"],["btnExportKmz","exportToKmz"],["btnExportExcel","exportToExcel"],["btnExportGeoJson","exportToGeoJson"],["btnExportJson","exportToJson"],["btnExportCsv","exportToCsv"],["btnExportShp","exportToShapefile"],
-      ["btnExportExcelDirect","exportToExcel",true],["btnExportKmlDirect","exportToKml",true],["btnExportGeoJsonDirect","exportToGeoJson",true]
+      ["btnExportKml","kml"],["btnExportKmz","kmz"],["btnExportExcel","xlsx"],["btnExportGeoJson","geojson"],["btnExportJson","json"],["btnExportCsv","csv"],["btnExportShp","shp"],
+      ["btnExportExcelDirect","xlsx",true],["btnExportKmlDirect","kml",true],["btnExportGeoJsonDirect","geojson",true]
     ];
-    controls.forEach(([id,method,all])=>{const button=document.getElementById(id);if(button)button.addEventListener("click",async()=>{
-      try{if(ExportUtils.setLanguage)ExportUtils.setLanguage(currentLang);await (ExportUtils.exportInWorker ? ExportUtils.exportInWorker(({exportToKml:"kml",exportToKmz:"kmz",exportToExcel:"xlsx",exportToGeoJson:"geojson",exportToJson:"json",exportToCsv:"csv",exportToShapefile:"shp"})[method],all?allResults:getFilteredResults(),"dalil_places_survey",null,{language:currentLang}) : ExportUtils[method](all?allResults:getFilteredResults(),"dalil_places_survey",null,{language:currentLang}));}
-      catch(error){showExportFailure(error);}
-    });});
-    if(btnExportSeparateKml)btnExportSeparateKml.addEventListener("click",()=>ExportUtils.exportSeparateFilesPerCategory(allResults,"kml","dalil_places_survey"));
+    controls.forEach(([id,format,all])=>{const button=document.getElementById(id);if(button)button.addEventListener("click",()=>runWorkerExport(format,all?allResults:getFilteredResults()));});
+    if(btnExportSeparateKml)btnExportSeparateKml.addEventListener("click",async()=>{
+      if(exportInFlight){alert(currentLang==="ar"?"يوجد تصدير قيد التنفيذ.":"An export is already running.");return;}
+      if(!allResults.length){alert(currentLang==="ar"?"لا توجد سجلات قابلة للتصدير.":"There are no records available for export.");return;}
+      exportInFlight=true;showExportProgress(t("exportPreparing"));
+      try{
+        const groups=new Map();
+        for(const item of allResults){
+          const category=ExportUtils.categoryLabel?ExportUtils.categoryLabel(item,"main",{language:currentLang}):"dalil";
+          if(!groups.has(category))groups.set(category,[]);
+          groups.get(category).push(item);
+        }
+        let index=0;
+        for(const [category,items] of groups){
+          index++;
+          updateExportProgress({phase:"build",processed:index-1,total:groups.size,percent:Math.round(((index-1)/groups.size)*100)});
+          await ExportUtils.exportInWorker("kml",items,"dalil_places_survey_"+category,null,{language:currentLang});
+        }
+        updateExportProgress({phase:"done",processed:groups.size,total:groups.size,percent:100});
+        hideExportProgress();
+      }catch(error){hideExportProgress(0);showExportFailure(error);}
+      finally{exportInFlight=false;}
+    });
   }
 
   function setupBottomDrawer(){
@@ -2434,22 +2572,57 @@ document.addEventListener("DOMContentLoaded", () => {
     return '<div class="map-popup" dir="'+(currentLang==="ar"?'rtl':'ltr')+'"><h4 class="map-popup-title">'+escapeHtml(place.name||"")+'</h4>'+symbolNote+'<div class="map-popup-body">'+fields.filter(([,value])=>value!=null&&value!=="").map(([key,value])=>'<b>'+escapeHtml(t(key))+':</b> '+escapeHtml(value)+'<br>').join("")+(hasGeometry(place)?'<code dir="ltr">X: '+Number(place.x).toFixed(6)+', Y: '+Number(place.y).toFixed(6)+'</code>':escapeHtml(t("unlocated")))+'</div>'+(safeUrl(place.url)?'<a class="map-popup-link" href="'+safeUrl(place.url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(t("openMap"))+'</a>':'')+'</div>';
   }
   function renderMapMarkers(places){
-    if(!markersLayerGroup)return;markersLayerGroup.clearLayers();
+    if(!markersLayerGroup)return;
+    const generation=++markerRenderGeneration;
+    markersLayerGroup.clearLayers();
     if(!canvasRenderer&&L.canvas)canvasRenderer=L.canvas();
     // Bound map rendering independently of the full table/export dataset.
     const points=places.filter(hasGeometry),visited=new Set(allCells.filter(DalilGridPresentation.visited).map(c=>c.id));
     const showEarly=document.getElementById("showUnscannedDiscoveries")?.checked;
     const inVisited=place=>!allCells.length||visited.has(place.ownerCellId||place.cellId);
     const visible=showEarly?points:points.filter(inVisited),early=points.filter(p=>!inVisited(p)).length,rendered=visible.slice(0,5000);
-    rendered.forEach(place=>{
-      const style=typeof DalilSymbology!=="undefined"?DalilSymbology.resolve(place):TaxonomyEngine.resolveCategoryStyle(place.category||place.searchKeyword||"");
-      const icon=L.divIcon&&style&&style.pngPath?L.divIcon({className:"dalil-gis-symbol"+(!inVisited(place)?" is-early-discovery":""),html:'<img data-symbol-id="'+escapeAttr(style.symbolId)+'" src="'+safeAssetUrl(style.pngPath)+'" alt="'+escapeAttr(resultCategory(place,"sub"))+'" width="30" height="30">',iconSize:[30,30],iconAnchor:[15,15]}):null;
-      const marker=icon&&L.marker?L.marker([Number(place.y),Number(place.x)],{icon}):L.circleMarker([Number(place.y),Number(place.x)],{renderer:canvasRenderer,radius:5,color:"#fff",weight:1.2,fillColor:style.color||"#0284c7",fillOpacity:0.9});
-      marker.bindPopup((!inVisited(place)?'<p>'+escapeHtml(t("earlyDiscoveryDetail"))+'</p>':'')+placePopup(place));markersLayerGroup.addLayer(marker);
-    });
+    const raf=typeof requestAnimationFrame==="function"?requestAnimationFrame:fn=>setTimeout(fn,16);
+    // Dense surveys use canvas circles instead of thousands of divIcon images.
+    const useVector=rendered.length>2500||!L.divIcon;
+    const styleCache=new Map();
+    const styleFor=place=>{
+      const key=place.canonicalId||place.categoryId||(place.categoryIds||[])[0]||place.category||place.searchKeyword||"";
+      if(!styleCache.has(key))styleCache.set(key,typeof DalilSymbology!=="undefined"?DalilSymbology.resolve(place):TaxonomyEngine.resolveCategoryStyle(key));
+      return styleCache.get(key);
+    };
+    const labelCache=new Map();
+    const subLabel=place=>{
+      const style=styleFor(place),key=style.symbolId||style.color||"general";
+      if(!labelCache.has(key))labelCache.set(key,resultCategory(place,"sub"));
+      return labelCache.get(key);
+    };
+    const batchSize=useVector?400:200;
+    let cursor=0;
+    const drawBatch=()=>{
+      if(generation!==markerRenderGeneration)return;
+      const end=Math.min(cursor+batchSize,rendered.length);
+      for(;cursor<end;cursor++){
+        const place=rendered[cursor];
+        try{
+          const style=styleFor(place),isEarly=!inVisited(place);
+          let marker;
+          if(!useVector&&style?.pngPath&&L.marker){
+            const icon=L.divIcon({className:"dalil-gis-symbol"+(isEarly?" is-early-discovery":""),html:'<img data-symbol-id="'+escapeAttr(style.symbolId)+'" src="'+safeAssetUrl(style.pngPath)+'" alt="'+escapeAttr(subLabel(place))+'" width="30" height="30" loading="lazy" decoding="async">',iconSize:[30,30],iconAnchor:[15,15]});
+            marker=L.marker([Number(place.y),Number(place.x)],{icon});
+          }else{
+            marker=L.circleMarker([Number(place.y),Number(place.x)],{renderer:canvasRenderer,radius:5,color:"#fff",weight:1.2,fillColor:style?.color||"#0284c7",fillOpacity:0.9});
+          }
+          // Build popup HTML only when it is actually opened.
+          marker.bindPopup(()=>((isEarly?'<p>'+escapeHtml(t("earlyDiscoveryDetail"))+'</p>':'')+placePopup(place)));
+          markersLayerGroup.addLayer(marker);
+        }catch(_){/* one malformed marker must not stop the survey layer */}
+      }
+      if(cursor<rendered.length)raf(drawBatch);
+    };
     const note=document.getElementById("mapRenderNotice");if(note)note.textContent=visible.length>rendered.length?(currentLang==="ar"?"تُعرض أول 5000 نقطة لتحسين الأداء؛ تتوفر جميع النتائج بالجدول والتصدير.":"The map shows the first 5,000 points for performance; all records remain in the table and exports."):"";
     const discoveryNotice=document.getElementById("mapDiscoveryNotice");if(discoveryNotice)discoveryNotice.textContent=early?String(early)+' '+t(showEarly?"earlyDiscoveriesShown":"earlyDiscoveriesHidden"):"";
-    renderSymbolLegend(rendered);
+    renderSymbolLegend(visible);
+    if(rendered.length)drawBatch();
   }
   function renderSymbolLegend(places=(allResults||[]).filter(hasGeometry)){
     const legend=document.getElementById("mapSymbolLegend");if(!legend||typeof DalilSymbology==="undefined")return;
@@ -2464,12 +2637,29 @@ document.addEventListener("DOMContentLoaded", () => {
     add("all",t("tabAll"),allResults.length);
     const counts=new Map();allResults.forEach(place=>{const category=resultCategory(place);counts.set(category,(counts.get(category)||0)+1);});counts.forEach((count,category)=>add(category,category,count));
   }
+  function foldSearchText(value){
+    if(typeof DalilArabic!=="undefined"&&DalilArabic.normalize)return DalilArabic.normalize(value);
+    return String(value==null?"":value).normalize("NFKC").toLowerCase().replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي");
+  }
+  // فهرس بحث مخزّن مؤقتًا لكل سجل: تصفية الجدول كانت تُعيد اشتقاق الفئات وطي النصوص
+  // لعشرات الآلاف من الحقول في كل ضغطة مفتاح. السجلات كائنات لقطات ثابتة، والمفتاح
+  // يشمل اللغة لأن تصنيف العرض يتبع لغة الواجهة.
+  function placeSearchEntry(place){
+    const cached=searchEntryCache.get(place);
+    if(cached&&cached.lang===currentLang)return cached;
+    const main=resultCategory(place),sub=resultCategory(place,"sub");
+    const text=[place.name,place.name_en,main,sub,place.searchKeyword,place.address,place.phone,place.website,place.ownerCellId,place.cellId,place.cellName,...(place.discoveryCellIds||[])]
+      .filter(value=>value!=null).map(foldSearchText).join("\u0001");
+    const entry={lang:currentLang,main,sub,text};
+    searchEntryCache.set(place,entry);
+    return entry;
+  }
   function getFilteredResults(){
-    const query=String(tableFilterInput&&tableFilterInput.value||"").trim().toLocaleLowerCase(currentLang);
+    const query=foldSearchText(tableFilterInput&&tableFilterInput.value||"");
     return allResults.filter(place=>{
-      const main=resultCategory(place),sub=resultCategory(place,"sub");
-      if(activePhenomFilter!=="all"&&main!==activePhenomFilter&&place.searchKeyword!==activePhenomFilter)return false;
-      return !query||[place.name,place.name_en,main,sub,place.searchKeyword,place.address,place.phone,place.website,place.ownerCellId,place.cellId,place.cellName,...(place.discoveryCellIds||[])].some(value=>value!=null&&String(value).toLocaleLowerCase(currentLang).includes(query));
+      const entry=placeSearchEntry(place);
+      if(activePhenomFilter!=="all"&&entry.main!==activePhenomFilter&&place.searchKeyword!==activePhenomFilter)return false;
+      return !query||entry.text.includes(query);
     });
   }
   function renderTable(){

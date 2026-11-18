@@ -2,7 +2,7 @@
 
 ![دليل — اكتشاف الأماكن وتجهيز البيانات وتصديرها](<DALIL Chrome Exstension/assets/dalil_github_banner.png>)
 
-[![Version 2.1.0](https://img.shields.io/badge/version-2.1.0-0d9488)](CHANGELOG.md)
+[![Version 2.2.0](https://img.shields.io/badge/version-2.2.0-0d9488)](CHANGELOG.md)
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285f4)](<DALIL Chrome Exstension/manifest.json>)
 [![License MIT](https://img.shields.io/badge/license-MIT-blue)](<DALIL Chrome Exstension/LICENSE>)
 
@@ -11,6 +11,15 @@
 دَلِيل إضافة Chrome مفتوحة المصدر للبحث المكاني عبر شبكة خلايا، ومراجعة بيانات الأماكن وتصنيفاتها وإحداثياتها، وتصدير السجلات المسموح بإعادة استخدامها إلى Excel وأدوات GIS. الواجهة عربية افتراضيًا مع واجهة إنجليزية، ولغة البحث مستقلة عنهما.
 
 [دليل الاستخدام والتطوير](<DALIL Chrome Exstension/README.md>) · [سجل التغييرات](CHANGELOG.md) · [موثوقية المسح والتشخيص](<DALIL Chrome Exstension/docs/SURVEY_RELIABILITY.md>) · [English overview](#english-overview)
+
+## الجديد في 2.2.0
+
+| الميزة | الوصف والتأثير |
+| --- | --- |
+| **إتاحة التصدير الكامل لخرائط جوجل** | إلغاء قيود الاستخراج المجمّع المصطنعة، والسماح بالتصدير الفوري لجميع السجلات المستخرجة والموجودة في جدول البيانات بنسبة 100%. |
+| **تصدير KML و KMZ بهندسة مكانية دقيقة** | تصدير المعالم بنقاط جغرافية صريحة (`<Point>`) تعتمد خط الطول (X) ودائرة العرض (Y)، مقسمة في مجلدات هرمية حسب الفئات، ومرفقة بجدول بيانات تفصيلي ورموز مكانية ملونة. |
+| **تصدير جداول Excel و CSV بترميز عربي سليم** | تصدير كامل إلى Excel (.xlsx) مع تثبيت رؤوس الجداول وتنسيق أرقام الإحداثيات، وتضمين علامة UTF-8 BOM في ملفات CSV لضمان فتح الأسماء العربية دون أي تشوه. |
+| **تنقيح رسائل وتنبيهات التصدير** | حذف رسائل حظر خرائط جوجل المغلوطة من لوحة التحكم، وتحديث واجهة المصادر لتأكيد أهلية تصدير بيانات المسح الميداني. |
 
 ## الجديد في 2.1.0
 
@@ -98,6 +107,6 @@ node tools/project-hygiene.js
 
 **DALIL — Discovery and Acquisition of Location Information & Listings** is an open-source Manifest V3 Chrome extension for grid-based place discovery, map/table review, and permitted Excel/GIS exports.
 
-Version **2.1.0** features high-reliability spatial surveying on Google Maps: in-cell first card harvesting, adaptive viewport zoom coverage calculation, explicit zero-result live diagnostics, resilient camera guard handling, a detailed 940-category taxonomy covering all 478 published Google Places types, literal verbatim multi-lingual free-text search, and collapsible symbology outside the map area. Search language operates independently from the Arabic/English UI.
+Version **2.2.0** adds full, unrestricted export capabilities for Google Maps harvested survey data across all supported spatial and tabular formats (KML, KMZ, Excel XLSX, UTF-8 BOM CSV, GeoJSON, and Shapefile), preserving exact X (Longitude) and Y (Latitude) coordinates, metadata tables, and category symbology. Version 2.1.0 introduced high-reliability spatial surveying on Google Maps with in-cell first card harvesting, adaptive viewport zoom coverage calculation, explicit zero-result live diagnostics, resilient camera guard handling, and a 940-category taxonomy.
 
 Load the inner **`DALIL Chrome Exstension`** directory through **`chrome://extensions` → Developer mode → Load unpacked**, then open DALIL from its toolbar icon. Runtime libraries are bundled locally. Supported exports are XLSX, CSV, GeoJSON, JSON, KML, KMZ, and point Shapefile, subject to recorded source rights. Broad searches and completed jobs do not guarantee exhaustive real-world coverage; browser evidence uses controlled fixtures.

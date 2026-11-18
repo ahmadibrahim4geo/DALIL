@@ -20,6 +20,22 @@ const mockResponse=data=>({ok:true,status:200,headers:{get:()=>null},text:async(
   assert.strictEqual(sample.x,0);assert.strictEqual(sample.hasExactCoords,true);assert.strictEqual(sample.email,'public@example.org');assert.strictEqual(sample.rating,undefined);
   const way=Sources.fromOsmElement({type:'way',id:6,center:{lat:30,lon:31},tags:{name:'Building'}});
   assert.strictEqual(way.x,null);assert.strictEqual(way.hasExactCoords,false);
+  // Full metadata: contact tags, hours, subcategory, structured address and accessibility.
+  const rich=Sources.fromOsmElement({type:'node',id:7,lon:31.24,lat:30.04,tags:{name:'صيدلية النور','name:en':'Al Noor Pharmacy',
+    amenity:'pharmacy','contact:phone':'+2022345678','contact:email':'info@example.com',opening_hours:'Mo-Sa 09:00-22:00',
+    'addr:housenumber':'12','addr:street':'شارع طلعت حرب','addr:city':'القاهرة',brand:'Noor',operator:'Noor Group',
+    cuisine:'mediterranean',wheelchair:'yes',delivery:'yes',takeaway:'yes',wikidata:'Q1',wikipedia:'ar:صيدلية',ref:'PH-7'}},'ar');
+  assert.strictEqual(rich.phone,'+2022345678');assert.strictEqual(rich.email,'info@example.com');
+  assert.strictEqual(rich.contact.phone,'+2022345678');assert.strictEqual(rich.contact.email,'info@example.com');
+  assert.strictEqual(rich.opening_hours,'Mo-Sa 09:00-22:00');assert.strictEqual(rich.subcategory,'pharmacy');
+  assert.strictEqual(rich.address,'12, شارع طلعت حرب, القاهرة');assert.strictEqual(rich.addressParts.city,'القاهرة');
+  assert.strictEqual(rich.business_status,'');assert.strictEqual(rich.wheelchair,'yes');assert.strictEqual(rich.cuisine,'mediterranean');
+  assert.strictEqual(rich.delivery,'yes');assert.strictEqual(rich.takeaway,'yes');assert.strictEqual(rich.wikidata,'Q1');
+  assert.strictEqual(rich.wikipedia,'ar:صيدلية');assert.strictEqual(rich.ref,'PH-7');
+  const richNormalized=Records.normalize(rich,{provider:'osm_overpass',exportAllowed:true,license:'ODbL-1.0',cellId:'c',queryId:'q'});
+  assert.strictEqual(richNormalized.fieldProvenance.opening_hours.state,'provided');
+  assert.strictEqual(richNormalized.fieldProvenance.wheelchair.state,'provided');
+  assert.strictEqual(richNormalized.fieldProvenance.description.state,'not_provided');
   const normalized=Records.normalize(sample,{provider:'osm_overpass',exportAllowed:true,license:'ODbL-1.0',cellId:'c',queryId:'q'});
   assert.strictEqual(normalized.fieldProvenance.rating.state,'not_provided');assert.strictEqual(normalized.fieldProvenance.email.state,'provided');assert.deepStrictEqual(normalized.geometry.coordinates,[0,0]);
   const camera=Records.normalize({name:'camera',x:31,y:30,hasExactCoords:false});assert.strictEqual(camera.geometry,null);assert.strictEqual(camera.x,null);
